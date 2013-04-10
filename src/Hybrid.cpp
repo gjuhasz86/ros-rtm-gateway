@@ -36,6 +36,7 @@ RTC::ReturnCode_t Hybrid::onInitialize() {
 
 RTC::ReturnCode_t Hybrid::onActivated(RTC::UniqueId ec_id) {
 	hybConf.doSubscibe();
+	hybConf.doAdvertise();
 	return RTC::RTC_OK;
 }
 

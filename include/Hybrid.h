@@ -35,8 +35,8 @@ void convert2(const boost::shared_ptr<std_msgs::String const>& in, TimedString& 
 	out.data = in->data.c_str();
 }
 
-void convert3(TimedString& in, const boost::shared_ptr<std_msgs::String const>& out) {
-	//out->data = in.data;
+void convert3(const TimedLong& in, std_msgs::Int32& out) {
+	out.data = in.data;
 }
 
 template<class T>
@@ -70,7 +70,8 @@ public:
 	void init() {
 		//createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", &convert1);
 		//createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
-		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort");
+		//boost::function2<void, TimedLong&, std_msgs::Int32&> convertFn = &convert3;
+		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort", &convert3);
 	}
 
 private:
@@ -100,13 +101,16 @@ private:
 	 * TODO: leak?
 	 */
 	std::vector<boost::function0<void> > rosSubscriberFnList;
+	std::vector<boost::function0<void> > rosAdvertiserFnList;
 
 	std::vector<boost::function0<void> > copyFromRtcToRosFnList;
+
 	/*!
 	 * A vector containing Subscriber objects (not references). We have to hold onto them as
 	 * letting the Subscriber go out of scope would cause the topic unsubscribed.
 	 */
 	std::vector<ros::Subscriber> rosSubscriberList;
+	std::vector<ros::Publisher> rosPublisherList;
 
 	ros::NodeHandle n;
 
@@ -133,7 +137,7 @@ private:
 	 * Note: RtmType has to have a parameterless constructor.
 	 */
 	template<class RtmType, class RosType>
-	void createNewRtmToRosLink(const std::string& name) {
+	void createNewRtmToRosLink(const std::string& name, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		RtmType* rtcInPortBuffer = new RtmType();
 		InPort<RtmType>* rtcInPort = new InPort<RtmType>(name.c_str(), *rtcInPortBuffer);
@@ -141,11 +145,15 @@ private:
 		rtcInPortList.push_back(rtcInPort);
 		rtcInPortBufferList.push_back(rtcInPortBuffer);
 
-		boost::function3<void, HybridConfig*, InPort<RtmType>*, RtmType*> fn = &HybridConfig::copyFromRtcToRos<RtmType,
-				RosType>;
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(fn, this,
-				rtcInPort, rtcInPortBuffer);
+		boost::function4<void, HybridConfig*, InPort<RtmType>*, RtmType*,
+				boost::function2<void, const RtmType&, RosType&> > fn =
+				&HybridConfig::copyFromRtcToRos<RtmType, RosType>;
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(fn, this, rtcInPort, rtcInPortBuffer, convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
+
+		boost::function0<void> rosAdvertiserFn;
+		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType>, this, name);
+		rosAdvertiserFnList.push_back(rosAdvertiserFn);
 	}
 
 	/*!
@@ -158,6 +166,12 @@ private:
 		ros::Subscriber sub = n.subscribe<RosType>(name, 1000,
 				boost::bind(&HybridConfig::onRosInput<RosType, RtmType>, this, _1, outPort, outPortBuffer, convertFn));
 		rosSubscriberList.push_back(sub);
+	}
+
+	template<class RosType>
+	void advertiseRosTopic(const std::string& name) {
+		ros::Publisher pub = n.advertise<RosType>(name, 1000);
+		rosPublisherList.push_back(pub);
 	}
 
 	/*!
@@ -174,11 +188,15 @@ private:
 	}
 
 	template<class RtmType, class RosType>
-	void copyFromRtcToRos(InPort<RtmType>* inPort, RtmType* inPortBuffer) {
+	void copyFromRtcToRos(InPort<RtmType>* inPort, RtmType* inPortBuffer,
+			boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		bool hasResult = readFromRtcPort(inPort);
 		if (hasResult) {
 			std::cout << toString(*inPortBuffer) << std::endl;
+			RosType msg;
+			convertFn(*inPortBuffer, msg);
+			rosPublisherList[0].publish(msg); //TODO publish to multiple
 		}
 
 	}
@@ -206,6 +224,12 @@ public:
 
 	void setRegisterRtcInPortFn(boost::function2<bool, const char*, InPortBase&> fn) {
 		registerRtcInPortFn = fn;
+	}
+
+	void doAdvertise() {
+		for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
+			rosAdvertiserFnList[i]();
+		}
 	}
 
 	void doSubscibe() {
