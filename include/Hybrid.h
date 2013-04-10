@@ -27,6 +27,23 @@
 
 using namespace RTC;
 
+template<class RtmType>
+struct RtmToRosLink {
+	RtmToRosLink(const std::string name) :
+			rtcInPort(name.c_str(), rtcInPortBuffer) {
+	}
+	RTC::InPort<RtmType> rtcInPort;
+	RtmType rtcInPortBuffer;
+	ros::Publisher rosPublisher;
+};
+/*
+ template<class RtmType>
+ struct RosToRtmLink {
+ RTC::OutPort<RtmType> rtcInPort;
+ RtmType rtcOutPortBuffer;
+ ros::Subscriber rosSubscriber;
+ };
+ */
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
 	out.data = in->data;
 }
@@ -71,7 +88,8 @@ public:
 		//createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", &convert1);
 		//createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
 		//boost::function2<void, TimedLong&, std_msgs::Int32&> convertFn = &convert3;
-		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort", &convert3);
+		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
+		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
 	}
 
 private:
@@ -82,6 +100,7 @@ private:
 	boost::function2<bool, const char*, OutPortBase&> registerRtcOutPortFn;
 	boost::function2<bool, const char*, InPortBase&> registerRtcInPortFn;
 
+	std::vector<boost::any> linkList;
 	/*!
 	 * A vector containing references to all of the RTC out ports.
 	 * TODO: should be objects (not references)?
@@ -139,20 +158,24 @@ private:
 	template<class RtmType, class RosType>
 	void createNewRtmToRosLink(const std::string& name, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
-		RtmType* rtcInPortBuffer = new RtmType();
-		InPort<RtmType>* rtcInPort = new InPort<RtmType>(name.c_str(), *rtcInPortBuffer);
-		registerRtcInPortFn(name.c_str(), *rtcInPort);
-		rtcInPortList.push_back(rtcInPort);
-		rtcInPortBufferList.push_back(rtcInPortBuffer);
+		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
+		linkList.push_back(link);
+		//InPort<RtmType>& rtcInPort = link->rtcInPort;
+		registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
-		boost::function4<void, HybridConfig*, InPort<RtmType>*, RtmType*,
-				boost::function2<void, const RtmType&, RosType&> > fn =
+		//RtmType* rtcInPortBuffer = new RtmType();
+		//InPort<RtmType>* rtcInPort = new InPort<RtmType>(name.c_str(), *rtcInPortBuffer);
+		//registerRtcInPortFn(name.c_str(), link.rtcInPort);
+		//rtcInPortList.push_back(rtcInPort);
+		//rtcInPortBufferList.push_back(rtcInPortBuffer);
+
+		boost::function3<void, HybridConfig*, RtmToRosLink<RtmType>*, boost::function2<void, const RtmType&, RosType&> > fn =
 				&HybridConfig::copyFromRtcToRos<RtmType, RosType>;
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(fn, this, rtcInPort, rtcInPortBuffer, convertFn);
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(fn, this, link, convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 		boost::function0<void> rosAdvertiserFn;
-		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType>, this, name);
+		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType, RtmType>, this, name, link);
 		rosAdvertiserFnList.push_back(rosAdvertiserFn);
 	}
 
@@ -168,10 +191,11 @@ private:
 		rosSubscriberList.push_back(sub);
 	}
 
-	template<class RosType>
-	void advertiseRosTopic(const std::string& name) {
-		ros::Publisher pub = n.advertise<RosType>(name, 1000);
-		rosPublisherList.push_back(pub);
+	template<class RosType, class RtmType>
+	void advertiseRosTopic(const std::string& name, RtmToRosLink<RtmType>* link) {
+		link->rosPublisher = n.advertise<RosType>(name, 1000);
+		//ros::Publisher pub = n.advertise<RosType>(name, 1000);
+		//rosPublisherList.push_back(pub);
 	}
 
 	/*!
@@ -188,15 +212,15 @@ private:
 	}
 
 	template<class RtmType, class RosType>
-	void copyFromRtcToRos(InPort<RtmType>* inPort, RtmType* inPortBuffer,
-			boost::function2<void, const RtmType&, RosType&> convertFn) {
+	void copyFromRtcToRos(RtmToRosLink<RtmType>* link, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
+		InPort<RtmType>* inPort = &link->rtcInPort;
 		bool hasResult = readFromRtcPort(inPort);
 		if (hasResult) {
-			std::cout << toString(*inPortBuffer) << std::endl;
+			std::cout << toString(link->rtcInPortBuffer) << std::endl;
 			RosType msg;
-			convertFn(*inPortBuffer, msg);
-			rosPublisherList[0].publish(msg); //TODO publish to multiple
+			convertFn(link->rtcInPortBuffer, msg);
+			link->rosPublisher.publish(msg);
 		}
 
 	}

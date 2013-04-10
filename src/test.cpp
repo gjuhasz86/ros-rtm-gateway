@@ -35,7 +35,35 @@ void X::fooTemp(std::string str) {
 	t.printOut(str);
 }
 
+struct Num {
+	int num;
+};
+
+struct Wrapper {
+	Num num;
+};
+
 int main(int argc, char** argv) {
+	std::vector<Wrapper> list;
+	Wrapper w;
+	int* numPtr = &w.num.num;
+	list.push_back(w);
+	*numPtr = 5;
+
+	std::cout << "stack1: " << w.num.num << std::endl;
+	std::cout << "stack2: " << list[0].num.num << std::endl;
+
+	Wrapper& wrap = list[0];
+	int& numRef = wrap.num.num;
+	numRef = 8;
+
+	std::cout << "stack3: " << w.num.num << std::endl;
+	std::cout << "stack4: " << list[0].num.num << std::endl;
+
+	list[0].num.num = 9;
+	std::cout << "stack5: " << w.num.num << std::endl;
+	std::cout << "stack6: " << list[0].num.num << std::endl;
+
 	MyFunc f1 = &addA<7>;
 	call(f1);
 
