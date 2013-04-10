@@ -30,8 +30,9 @@ using namespace RTC;
 template<class RtmType>
 struct RtmToRosLink {
 	RtmToRosLink(const std::string name) :
-			rtcInPort(name.c_str(), rtcInPortBuffer) {
+			name(name), rtcInPort(name.c_str(), rtcInPortBuffer) {
 	}
+	std::string name;
 	RTC::InPort<RtmType> rtcInPort;
 	RtmType rtcInPortBuffer;
 	ros::Publisher rosPublisher;
@@ -106,14 +107,12 @@ private:
 	 * TODO: should be objects (not references)?
 	 */
 	std::vector<boost::any> rtcOutPortList;
-	std::vector<boost::any> rtcInPortList;
 
 	/*!
 	 * A vector containing references to all of the RTC out port buffers.
 	 * TODO: should be objects (not references)?
 	 */
 	std::vector<boost::any> rtcOutPortBufferList;
-	std::vector<boost::any> rtcInPortBufferList;
 
 	/*!
 	 * A vector containing 'HybridConfig::subscribeToRosTopic' function objects.
@@ -129,7 +128,6 @@ private:
 	 * letting the Subscriber go out of scope would cause the topic unsubscribed.
 	 */
 	std::vector<ros::Subscriber> rosSubscriberList;
-	std::vector<ros::Publisher> rosPublisherList;
 
 	ros::NodeHandle n;
 
@@ -160,22 +158,14 @@ private:
 
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
 		linkList.push_back(link);
-		//InPort<RtmType>& rtcInPort = link->rtcInPort;
 		registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
-		//RtmType* rtcInPortBuffer = new RtmType();
-		//InPort<RtmType>* rtcInPort = new InPort<RtmType>(name.c_str(), *rtcInPortBuffer);
-		//registerRtcInPortFn(name.c_str(), link.rtcInPort);
-		//rtcInPortList.push_back(rtcInPort);
-		//rtcInPortBufferList.push_back(rtcInPortBuffer);
-
-		boost::function3<void, HybridConfig*, RtmToRosLink<RtmType>*, boost::function2<void, const RtmType&, RosType&> > fn =
-				&HybridConfig::copyFromRtcToRos<RtmType, RosType>;
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(fn, this, link, convertFn);
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(&HybridConfig::copyFromRtcToRos<RtmType, RosType>, this,
+				link, convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 		boost::function0<void> rosAdvertiserFn;
-		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType, RtmType>, this, name, link);
+		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType, RtmType>, this, link);
 		rosAdvertiserFnList.push_back(rosAdvertiserFn);
 	}
 
@@ -192,10 +182,8 @@ private:
 	}
 
 	template<class RosType, class RtmType>
-	void advertiseRosTopic(const std::string& name, RtmToRosLink<RtmType>* link) {
-		link->rosPublisher = n.advertise<RosType>(name, 1000);
-		//ros::Publisher pub = n.advertise<RosType>(name, 1000);
-		//rosPublisherList.push_back(pub);
+	void advertiseRosTopic(RtmToRosLink<RtmType>* link) {
+		link->rosPublisher = n.advertise<RosType>(link->name, 1000);
 	}
 
 	/*!
