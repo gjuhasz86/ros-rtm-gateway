@@ -42,6 +42,7 @@ RTC::ReturnCode_t Hybrid::onActivated(RTC::UniqueId ec_id) {
 
 RTC::ReturnCode_t Hybrid::onDeactivated(RTC::UniqueId ec_id) {
 	hybConf.doUnsubscribe();
+	hybConf.doStopAdvertise();
 	return RTC::RTC_OK;
 }
 

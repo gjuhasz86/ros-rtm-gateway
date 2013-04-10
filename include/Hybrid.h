@@ -120,7 +120,8 @@ private:
 	 * A vector containing Subscriber objects (not references). We have to hold onto them as
 	 * letting the Subscriber go out of scope would cause the topic unsubscribed.
 	 */
-	std::vector<ros::Subscriber> rosSubscriberList;
+	std::vector<ros::Subscriber*> rosSubscriberList;
+	std::vector<ros::Publisher*> rosPublisherList;
 
 	ros::NodeHandle n;
 
@@ -169,11 +170,13 @@ private:
 			boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convertFn) {
 		link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
 				boost::bind(&HybridConfig::onRosInput<RosType, RtmType>, this, _1, link, convertFn));
+		rosSubscriberList.push_back(&link->rosSubscriber);
 	}
 
 	template<class RosType, class RtmType>
 	void advertiseRosTopic(RtmToRosLink<RtmType>* link) {
 		link->rosPublisher = n.advertise<RosType>(link->name, 1000);
+		rosPublisherList.push_back(&link->rosPublisher);
 	}
 
 	/*!
@@ -242,7 +245,13 @@ public:
 
 	void doUnsubscribe() {
 		for (int i = 0; i < rosSubscriberList.size(); ++i) {
-			rosSubscriberList[i].shutdown();
+			rosSubscriberList[i]->shutdown();
+		}
+	}
+
+	void doStopAdvertise() {
+		for (int i = 0; i < rosPublisherList.size(); ++i) {
+			rosPublisherList[i]->shutdown();
 		}
 	}
 
