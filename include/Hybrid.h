@@ -40,21 +40,23 @@ void convert3(const TimedLong& in, std_msgs::Int32& out) {
 }
 
 template<class T>
-std::string toString(const boost::shared_ptr<T const>& in) {
-	return "";
+std::string toString(const T& in);
+{
+	return "[Not implemented]";
 }
 
 template<>
-std::string toString<std_msgs::String>(const boost::shared_ptr<std_msgs::String const>& in) {
-	return in->data;
+std::string toString<std_msgs::String>(const std_msgs::String& in) {
+	return in.data;
 }
 
 template<>
-std::string toString<std_msgs::Int32>(const boost::shared_ptr<std_msgs::Int32 const>& in) {
-	return boost::lexical_cast<std::string>(in->data);
+std::string toString<std_msgs::Int32>(const std_msgs::Int32& in) {
+	return boost::lexical_cast<std::string>(in.data);
 }
 
-std::string toString(TimedLong& in) {
+template<>
+std::string toString(const TimedLong& in) {
 	return boost::lexical_cast<std::string>(in.data);
 }
 
@@ -80,6 +82,34 @@ struct RosToRtmLink {
 	ros::Subscriber rosSubscriber;
 };
 
+template<class In, class Out>
+struct Converter {
+public:
+	Converter(boost::function2<void, const boost::shared_ptr<In const>&, Out&> convert,
+			boost::function1<std::string, const In&> inToString, boost::function1<std::string, const Out&> outToString) :
+			convert(convert), inToString(inToString), outToString(outToString) {
+	}
+
+	Converter(boost::function2<void, const boost::shared_ptr<In const>&, Out&> convert,
+			boost::function1<std::string, const In&> inToString) :
+			convert(convert), inToString(inToString), outToString(boost::bind(&Converter::toString<Out>, _1)) {
+	}
+
+	Converter(boost::function2<void, const boost::shared_ptr<In const>&, Out&> convert,
+			boost::function1<std::string, const Out&> outToString) :
+			convert(convert), outToString(outToString), inToString(boost::bind(&Converter::toString<In>, _1)) {
+	}
+
+	boost::function2<void, const boost::shared_ptr<In const>&, Out&> convert;
+	boost::function1<std::string, const In&> inToString;
+	boost::function1<std::string, const Out&> outToString;
+private:
+	template<class T>
+	static std::string toString(T t) {
+		return "[No toString method]";
+	}
+};
+
 class HybridConfig {
 
 public:
@@ -90,9 +120,11 @@ public:
 	} //why virtual?
 
 	void init() {
+		Converter<std_msgs::Int32, TimedLong> c1(&convert1, &toString<std_msgs::Int32>, &toString<TimedLong>);
+
 		createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", &convert1);
-		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
-		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
+//		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
+//		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
 		//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
 	}
 
@@ -102,20 +134,20 @@ private:
 	 * A function to be called to add out port to the RTC.
 	 */
 	boost::function2<bool, const char*, OutPortBase&> registerRtcOutPortFn;
-	boost::function2<bool, const char*, InPortBase&> registerRtcInPortFn;
 
 	/*!
-	 * A vector containing 'HybridConfig::subscribeToRosTopic' function objects.
-	 * TODO: leak?
+	 * A function to be called to add in port to the RTC.
 	 */
+	boost::function2<bool, const char*, InPortBase&> registerRtcInPortFn;
+
 	std::vector<boost::function0<void> > rosSubscriberFnList;
 	std::vector<boost::function0<void> > rosAdvertiserFnList;
 
 	std::vector<boost::function0<void> > copyFromRtcToRosFnList;
 
 	/*!
-	 * A vector containing Subscriber objects (not references). We have to hold onto them as
-	 * letting the Subscriber go out of scope would cause the topic unsubscribed.
+	 * A vector containing Subscriber/Publisher objects (not references). We have to hold onto them as
+	 * letting the Subscriber go out of scope would cause the node unsubscribe from the topic.
 	 */
 	std::vector<ros::Subscriber*> rosSubscriberList;
 	std::vector<ros::Publisher*> rosPublisherList;
@@ -131,7 +163,6 @@ private:
 			boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convertFn) {
 
 		RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		//rosToRtmLinkList.push_back(link);
 		registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
@@ -146,7 +177,6 @@ private:
 	void createNewRtmToRosLink(const std::string& name, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
-		//rtmToRosLinkList.push_back(link);
 		registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
 		boost::function0<void> copyFromRtcToRosFn = boost::bind(&HybridConfig::copyFromRtcToRos<RtmType, RosType>, this,
@@ -183,7 +213,7 @@ private:
 	template<class RosType, class RtmType>
 	void onRosInput(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
 			boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convertFn) {
-		std::string s = toString<RosType>(msgIn);
+		std::string s = toString<RosType>(msgIn->data);
 		std::cout << "ROS: " << s.c_str() << std::endl;
 		convertFn(msgIn, link->rtcOutPortBuffer);
 		writeToRtcPort(&link->rtcOutPort);
@@ -195,7 +225,7 @@ private:
 		InPort<RtmType>* inPort = &link->rtcInPort;
 		bool hasResult = readFromRtcPort(inPort);
 		if (hasResult) {
-			std::cout << toString(link->rtcInPortBuffer) << std::endl;
+			//std::cout << toString(link->rtcInPortBuffer) << std::endl;
 			RosType msg;
 			convertFn(link->rtcInPortBuffer, msg);
 			link->rosPublisher.publish(msg);
