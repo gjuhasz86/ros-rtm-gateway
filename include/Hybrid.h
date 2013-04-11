@@ -104,9 +104,6 @@ private:
 	boost::function2<bool, const char*, OutPortBase&> registerRtcOutPortFn;
 	boost::function2<bool, const char*, InPortBase&> registerRtcInPortFn;
 
-	std::vector<boost::any> rtmToRosLinkList;
-	std::vector<boost::any> rosToRtmLinkList;
-
 	/*!
 	 * A vector containing 'HybridConfig::subscribeToRosTopic' function objects.
 	 * TODO: leak?
@@ -134,7 +131,7 @@ private:
 			boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convertFn) {
 
 		RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		rosToRtmLinkList.push_back(link);
+		//rosToRtmLinkList.push_back(link);
 		registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
@@ -149,7 +146,7 @@ private:
 	void createNewRtmToRosLink(const std::string& name, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
-		rtmToRosLinkList.push_back(link);
+		//rtmToRosLinkList.push_back(link);
 		registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
 		boost::function0<void> copyFromRtcToRosFn = boost::bind(&HybridConfig::copyFromRtcToRos<RtmType, RosType>, this,
