@@ -1,5 +1,5 @@
-#ifndef HYBRID_H
-#define HYBRID_H
+#ifndef GATEWAY_H
+#define GATEWAY_H
 
 #include <rtm/Manager.h>
 #include <rtm/DataFlowComponentBase.h>
@@ -280,4 +280,4 @@ DLL_EXPORT void HybridInit(RTC::Manager* manager);
 }
 ;
 
-#endif // HYBRID_H
+#endif // GATEWAY_H
