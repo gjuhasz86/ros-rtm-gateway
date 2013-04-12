@@ -11,14 +11,14 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
-#include "Hybrid.h"
+#include "Gateway.h"
 
 void MyModuleInit(RTC::Manager* manager) {
-	std::cout << "Starting Hybrid" << std::endl;
+	std::cout << "Starting Gateway" << std::endl;
 	HybridInit(manager);
 	RTC::RtcBase* comp;
 
-	comp = manager->createComponent("Hybrid");
+	comp = manager->createComponent("Gateway");
 
 	if (comp == NULL) {
 		std::cerr << "Component create failed." << std::endl;
@@ -31,7 +31,7 @@ void MyModuleInit(RTC::Manager* manager) {
 
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
-	ros::init(argc, argv, "Hybrid", ros::init_options::NoSigintHandler);
+	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
 	RTC::Manager* manager;
 	manager = RTC::Manager::init(argc, argv);
