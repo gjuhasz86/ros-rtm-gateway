@@ -91,14 +91,16 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << std::endl;
 }
 
-class HybridConfig {
-
+class Hybrid: public RTC::DataFlowComponentBase {
 public:
-	HybridConfig() {
-	}
-	virtual ~HybridConfig() {
+	Hybrid(RTC::Manager* manager);
 
-	} //why virtual?
+	~Hybrid();
+
+	virtual RTC::ReturnCode_t onInitialize();
+	virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
+	virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
+	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
 
 	void init() {
 		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
@@ -108,7 +110,6 @@ public:
 //		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
 		//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
 	}
-
 private:
 
 	/*!
@@ -146,7 +147,7 @@ private:
 		registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
-		rosSubscriberFn = boost::bind(&HybridConfig::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
+		rosSubscriberFn = boost::bind(&Hybrid::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 		rosSubscriberFnList.push_back(rosSubscriberFn);
 	}
 
@@ -159,12 +160,12 @@ private:
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
 		registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(&HybridConfig::copyFromRtcToRos<RtmType, RosType>, this,
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(&Hybrid::copyFromRtcToRos<RtmType, RosType>, this,
 				link, convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 		boost::function0<void> rosAdvertiserFn;
-		rosAdvertiserFn = boost::bind(&HybridConfig::advertiseRosTopic<RosType, RtmType>, this, link);
+		rosAdvertiserFn = boost::bind(&Hybrid::advertiseRosTopic<RosType, RtmType>, this, link);
 		rosAdvertiserFnList.push_back(rosAdvertiserFn);
 	}
 
@@ -175,7 +176,7 @@ private:
 	template<class RosType, class RtmType>
 	void subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
 		link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
-				boost::bind(&HybridConfig::onRosInput<RosType, RtmType>, this, _1, link, converter));
+				boost::bind(&Hybrid::onRosInput<RosType, RtmType>, this, _1, link, converter));
 		rosSubscriberList.push_back(&link->rosSubscriber);
 	}
 
@@ -272,27 +273,6 @@ public:
 			copyFromRtcToRosFnList[i]();
 		}
 	}
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-class Hybrid: public RTC::DataFlowComponentBase {
-public:
-	Hybrid(RTC::Manager* manager);
-
-	~Hybrid();
-
-	virtual RTC::ReturnCode_t onInitialize();
-	virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
-	virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
-	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
-
-protected:
-	HybridConfig hybConf;
-
 };
 
 extern "C" {

@@ -25,30 +25,30 @@ Hybrid::~Hybrid() {
 
 RTC::ReturnCode_t Hybrid::onInitialize() {
 	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Hybrid::addOutPort, this, _1, _2);
-	hybConf.setRegisterRtcOutPortFn(addOutPortFn);
+	setRegisterRtcOutPortFn(addOutPortFn);
 
 	boost::function2<bool, const char*, InPortBase&> addInPortFn = boost::bind(&Hybrid::addInPort, this, _1, _2);
-	hybConf.setRegisterRtcInPortFn(addInPortFn);
+	setRegisterRtcInPortFn(addInPortFn);
 
-	hybConf.init();
+	init();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Hybrid::onActivated(RTC::UniqueId ec_id) {
-	hybConf.doSubscibe();
-	hybConf.doAdvertise();
+	doSubscibe();
+	doAdvertise();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Hybrid::onDeactivated(RTC::UniqueId ec_id) {
-	hybConf.doUnsubscribe();
-	hybConf.doStopAdvertise();
+	doUnsubscribe();
+	doStopAdvertise();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Hybrid::onExecute(RTC::UniqueId ec_id) {
 	ros::spinOnce();
-	hybConf.onExec();
+	onExec();
 	return RTC::RTC_OK;
 }
 
