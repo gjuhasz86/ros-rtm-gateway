@@ -28,6 +28,7 @@
 using namespace RTC;
 
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
+	//std::cout << "convert called" << std::endl;
 	out.data = in->data;
 }
 
@@ -65,53 +66,28 @@ template<class RosType, class RtmType>
 struct RosToRtmConverter {
 public:
 	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert,
-			boost::function1<std::string, const boost::shared_ptr<RosType const>&> inToString,
-			boost::function1<std::string, const RtmType&> outToString) :
-			convert(convert), rosToString(inToString), rtmToString(outToString), hasRosToString(true), hasRtmToString(
-					true) {
+			boost::function3<void, const boost::shared_ptr<RosType const>&, const RtmType&, const RosToRtmLink<RtmType>&> const callback) :
+			convert(convert), callback(callback), hasCallback(true) {
 	}
 
-	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert,
-			boost::function1<std::string, const RosType&> inToString) :
-			convert(convert), rosToString(inToString), rtmToString(
-					boost::bind(&RosToRtmConverter::toString<RtmType>, _1)), hasRosToString(true), hasRtmToString(false) {
-	}
-
-	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert,
-			boost::function1<std::string, const RtmType&> outToString) :
-			convert(convert), rtmToString(outToString), rosToString(
-					boost::bind(&RosToRtmConverter::toString<RosType>, _1)), hasRosToString(false), hasRtmToString(true) {
+	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert) :
+			convert(convert), hasCallback(false) {
 	}
 
 	boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert;
 
-	bool const hasRosToString;
-	boost::function1<std::string, const boost::shared_ptr<RosType const>&> const rosToString;
-
-	bool const hasRtmToString;
-	boost::function1<std::string, const RtmType&> const rtmToString;
-
-private:
-	template<class T>
-	static std::string toString(T t) {
-		return "[No toString method]";
-	}
+	bool const hasCallback;
+	boost::function3<void, const boost::shared_ptr<RosType const>&, const RtmType&, const RosToRtmLink<RtmType>&> callback;
 };
 
-std::string toString1(const boost::shared_ptr<std_msgs::String>& in) {
-	return in->data;
-}
-
-std::string toString2(const boost::shared_ptr<std_msgs::Int32 const>& in) {
-	return boost::lexical_cast<std::string>(in->data);
-}
-
-std::string toString3(const TimedLong& in) {
-	return boost::lexical_cast<std::string>(in.data);
-}
-
-std::string toString4(const std_msgs::Int32& in) {
-	return boost::lexical_cast<std::string>(in);
+void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, const TimedLong& out,
+		const RosToRtmLink<TimedLong>& link) {
+	std::cout << "[";
+	std::cout << link.name.c_str();
+	std::cout << "] : [";
+	std::cout << boost::lexical_cast<std::string>(in->data).c_str();
+	std::cout << "]->[";
+	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
 }
 
 class HybridConfig {
@@ -124,7 +100,7 @@ public:
 	} //why virtual?
 
 	void init() {
-		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &toString2, &toString3);
+		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 
 		createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 //		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
@@ -163,15 +139,13 @@ private:
 	 * TODO: should the name be reference?
 	 */
 	template<class RosType, class RtmType>
-	void createNewRosToRtmLink(const std::string& name,
-			RosToRtmConverter<RosType, RtmType>& converter) {
+	void createNewRosToRtmLink(const std::string& name, RosToRtmConverter<RosType, RtmType>& converter) {
 
 		RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
 		registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
-		rosSubscriberFn = boost::bind(&HybridConfig::subscribeToRosTopic<RosType, RtmType>, this, link,
-				converter);
+		rosSubscriberFn = boost::bind(&HybridConfig::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 		rosSubscriberFnList.push_back(rosSubscriberFn);
 	}
 
@@ -198,8 +172,7 @@ private:
 	 * It also requires a converter function which converts the input data from ROS to the output type of RTC.
 	 */
 	template<class RosType, class RtmType>
-	void subscribeToRosTopic(RosToRtmLink<RtmType>* link,
-			RosToRtmConverter<RosType, RtmType>& converter) {
+	void subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
 		link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
 				boost::bind(&HybridConfig::onRosInput<RosType, RtmType>, this, _1, link, converter));
 		rosSubscriberList.push_back(&link->rosSubscriber);
@@ -218,10 +191,16 @@ private:
 	template<class RosType, class RtmType>
 	void onRosInput(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
 			RosToRtmConverter<RosType, RtmType> converter) {
-		std::string s = converter.rosToString(msgIn);
-		std::cout << "ROS: " << s.c_str() << std::endl;
+
 		converter.convert(msgIn, link->rtcOutPortBuffer);
+
+		//TODO: callback not working
+		//if (converter.hasCallback) {
+		converter.callback(msgIn, link->rtcOutPortBuffer, *link);
+		//}
+
 		writeToRtcPort(&link->rtcOutPort);
+
 	}
 
 	template<class RtmType, class RosType>
