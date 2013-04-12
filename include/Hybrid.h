@@ -66,7 +66,7 @@ template<class RosType, class RtmType>
 struct RosToRtmConverter {
 public:
 	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert,
-			boost::function3<void, const boost::shared_ptr<RosType const>&, const RtmType&, const RosToRtmLink<RtmType>&> const callback) :
+			boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> const callback) :
 			convert(convert), callback(callback), hasCallback(true) {
 	}
 
@@ -77,10 +77,10 @@ public:
 	boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert;
 
 	bool const hasCallback;
-	boost::function3<void, const boost::shared_ptr<RosType const>&, const RtmType&, const RosToRtmLink<RtmType>&> callback;
+	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
 };
 
-void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, const TimedLong& out,
+void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out,
 		const RosToRtmLink<TimedLong>& link) {
 	std::cout << "[";
 	std::cout << link.name.c_str();
@@ -88,6 +88,7 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, const TimedLon
 	std::cout << boost::lexical_cast<std::string>(in->data).c_str();
 	std::cout << "]->[";
 	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
+	std::cout << std::endl;
 }
 
 class HybridConfig {
