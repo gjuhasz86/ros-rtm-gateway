@@ -16,41 +16,55 @@ static const char* hybrid_spec[] = { //
 				"lang_type", "compile", //
 				"" };
 
-Hybrid::Hybrid(RTC::Manager* manager) :
+////////////////////////////////////////////////////////////////////////////////
+// Constructor and Destructor
+
+Gateway::Gateway(RTC::Manager* manager) :
 		RTC::DataFlowComponentBase(manager) {
 }
 
-Hybrid::~Hybrid() {
+Gateway::~Gateway() {
 }
 
-RTC::ReturnCode_t Hybrid::onInitialize() {
+
+////////////////////////////////////////////////////////////////////////////////
+// Public methods - methods comes with the RT component
+
+
+RTC::ReturnCode_t Gateway::onInitialize() {
 	init();
 	return RTC::RTC_OK;
 }
 
-RTC::ReturnCode_t Hybrid::onActivated(RTC::UniqueId ec_id) {
+RTC::ReturnCode_t Gateway::onActivated(RTC::UniqueId ec_id) {
 	doSubscibe();
 	doAdvertise();
 	return RTC::RTC_OK;
 }
 
-RTC::ReturnCode_t Hybrid::onDeactivated(RTC::UniqueId ec_id) {
+RTC::ReturnCode_t Gateway::onDeactivated(RTC::UniqueId ec_id) {
 	doUnsubscribe();
 	doStopAdvertise();
 	return RTC::RTC_OK;
 }
 
-RTC::ReturnCode_t Hybrid::onExecute(RTC::UniqueId ec_id) {
+RTC::ReturnCode_t Gateway::onExecute(RTC::UniqueId ec_id) {
 	ros::spinOnce();
 	onExec();
 	return RTC::RTC_OK;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Protected methods - methods specific to the gateway component
+
+
+
+
 extern "C" {
 
 void HybridInit(RTC::Manager* manager) {
 	coil::Properties profile(hybrid_spec);
-	manager->registerFactory(profile, RTC::Create<Hybrid>, RTC::Delete<Hybrid>);
+	manager->registerFactory(profile, RTC::Create<Gateway>, RTC::Delete<Gateway>);
 }
 
 }

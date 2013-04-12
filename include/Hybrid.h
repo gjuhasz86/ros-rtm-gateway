@@ -90,7 +90,7 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << std::endl;
 }
 
-class Hybrid: public RTC::DataFlowComponentBase {
+class Gateway: public RTC::DataFlowComponentBase {
 private:
 
 	std::vector<boost::function0<void> > rosSubscriberFnList;
@@ -108,9 +108,9 @@ private:
 	ros::NodeHandle n;
 
 public:
-	Hybrid(RTC::Manager* manager);
+	Gateway(RTC::Manager* manager);
 
-	~Hybrid();
+	~Gateway();
 
 	virtual RTC::ReturnCode_t onInitialize();
 	virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
@@ -140,7 +140,7 @@ protected:
 		addOutPort(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
-		rosSubscriberFn = boost::bind(&Hybrid::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
+		rosSubscriberFn = boost::bind(&Gateway::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 		rosSubscriberFnList.push_back(rosSubscriberFn);
 	}
 
@@ -155,12 +155,12 @@ protected:
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
 		addInPort(name.c_str(), link->rtcInPort);
 
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(&Hybrid::copyFromRtcToRos<RtmType, RosType>, this, link,
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(&Gateway::copyFromRtcToRos<RtmType, RosType>, this, link,
 				convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 		boost::function0<void> rosAdvertiserFn;
-		rosAdvertiserFn = boost::bind(&Hybrid::advertiseRosTopic<RosType, RtmType>, this, link);
+		rosAdvertiserFn = boost::bind(&Gateway::advertiseRosTopic<RosType, RtmType>, this, link);
 		rosAdvertiserFnList.push_back(rosAdvertiserFn);
 	}
 
@@ -171,7 +171,7 @@ protected:
 	template<class RosType, class RtmType>
 	void subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
 		link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
-				boost::bind(&Hybrid::copyFromRosToRtc<RosType, RtmType>, this, _1, link, converter));
+				boost::bind(&Gateway::copyFromRosToRtc<RosType, RtmType>, this, _1, link, converter));
 		rosSubscriberList.push_back(&link->rosSubscriber);
 	}
 
