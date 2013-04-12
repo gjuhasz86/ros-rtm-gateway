@@ -80,8 +80,7 @@ public:
 	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
 };
 
-void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out,
-		const RosToRtmLink<TimedLong>& link) {
+void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out, const RosToRtmLink<TimedLong>& link) {
 	std::cout << "[";
 	std::cout << link.name.c_str();
 	std::cout << "] : [";
@@ -92,35 +91,7 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 }
 
 class Hybrid: public RTC::DataFlowComponentBase {
-public:
-	Hybrid(RTC::Manager* manager);
-
-	~Hybrid();
-
-	virtual RTC::ReturnCode_t onInitialize();
-	virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
-	virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
-	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
-
-	void init() {
-		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
-
-		createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
-//		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
-//		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
-		//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
-	}
 private:
-
-	/*!
-	 * A function to be called to add out port to the RTC.
-	 */
-	boost::function2<bool, const char*, OutPortBase&> registerRtcOutPortFn;
-
-	/*!
-	 * A function to be called to add in port to the RTC.
-	 */
-	boost::function2<bool, const char*, InPortBase&> registerRtcInPortFn;
 
 	std::vector<boost::function0<void> > rosSubscriberFnList;
 	std::vector<boost::function0<void> > rosAdvertiserFnList;
@@ -136,7 +107,29 @@ private:
 
 	ros::NodeHandle n;
 
+public:
+	Hybrid(RTC::Manager* manager);
+
+	~Hybrid();
+
+	virtual RTC::ReturnCode_t onInitialize();
+	virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
+	virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
+	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
+
+protected:
+	void init() {
+		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+
+		createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+//		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
+//		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
+		//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
+	}
+
 	/*!
+	 * Links a ROS topic to an RTC out port.
+	 *
 	 * Note: RtmType has to have a parameterless constructor.
 	 * TODO: should the name be reference?
 	 */
@@ -144,7 +137,7 @@ private:
 	void createNewRosToRtmLink(const std::string& name, RosToRtmConverter<RosType, RtmType>& converter) {
 
 		RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
+		addOutPort(name.c_str(), link->rtcOutPort);
 
 		boost::function0<void> rosSubscriberFn;
 		rosSubscriberFn = boost::bind(&Hybrid::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
@@ -152,16 +145,18 @@ private:
 	}
 
 	/*!
+	 * Links an RTC in port to a ROS topic.
+	 *
 	 * Note: RtmType has to have a parameterless constructor.
 	 */
 	template<class RtmType, class RosType>
 	void createNewRtmToRosLink(const std::string& name, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
-		registerRtcInPortFn(name.c_str(), link->rtcInPort);
+		addInPort(name.c_str(), link->rtcInPort);
 
-		boost::function0<void> copyFromRtcToRosFn = boost::bind(&Hybrid::copyFromRtcToRos<RtmType, RosType>, this,
-				link, convertFn);
+		boost::function0<void> copyFromRtcToRosFn = boost::bind(&Hybrid::copyFromRtcToRos<RtmType, RosType>, this, link,
+				convertFn);
 		copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 		boost::function0<void> rosAdvertiserFn;
@@ -176,10 +171,13 @@ private:
 	template<class RosType, class RtmType>
 	void subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
 		link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
-				boost::bind(&Hybrid::onRosInput<RosType, RtmType>, this, _1, link, converter));
+				boost::bind(&Hybrid::copyFromRosToRtc<RosType, RtmType>, this, _1, link, converter));
 		rosSubscriberList.push_back(&link->rosSubscriber);
 	}
 
+	/*!
+	 * This member function advertises a ROS topic and links the given RTC in port to the topic.
+	 */
 	template<class RosType, class RtmType>
 	void advertiseRosTopic(RtmToRosLink<RtmType>* link) {
 		link->rosPublisher = n.advertise<RosType>(link->name, 1000);
@@ -191,25 +189,28 @@ private:
 	 * on the ROS topic.
 	 */
 	template<class RosType, class RtmType>
-	void onRosInput(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
+	void copyFromRosToRtc(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
 			RosToRtmConverter<RosType, RtmType> converter) {
 
 		converter.convert(msgIn, link->rtcOutPortBuffer);
 
-		//TODO: callback not working
-		//if (converter.hasCallback) {
-		converter.callback(msgIn, link->rtcOutPortBuffer, *link);
-		//}
+		if (converter.hasCallback) {
+			converter.callback(msgIn, link->rtcOutPortBuffer, *link);
+		}
 
 		writeToRtcPort(&link->rtcOutPort);
 
 	}
 
+	/*!
+	 * This member function is a callback function for the RTC port. It is called periodically, and passes the
+	 * Link object containing an RTC port, and a ROS publisher.
+	 */
 	template<class RtmType, class RosType>
 	void copyFromRtcToRos(RtmToRosLink<RtmType>* link, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 		InPort<RtmType>* inPort = &link->rtcInPort;
-		bool hasResult = readFromRtcPort(inPort);
+		bool hasResult = readFromRtcPort<RtmType>(inPort);
 		if (hasResult) {
 			//std::cout << toString(link->rtcInPortBuffer) << std::endl;
 			RosType msg;
@@ -219,6 +220,10 @@ private:
 
 	}
 
+	/*!
+	 * Checks whether new data has arrived to the given RTC port. If it has, it loads the data into the buffer
+	 * associated with the port.
+	 */
 	template<class RtmType>
 	bool readFromRtcPort(InPort<RtmType>* inPort) {
 		if (inPort->isNew()) {
@@ -229,6 +234,9 @@ private:
 		}
 	}
 
+	/*!
+	 * Sends the data to the given port from the buffer associated with it.
+	 */
 	template<class RtmType>
 	void writeToRtcPort(OutPort<RtmType>* outPort) {
 		outPort->write();
@@ -236,17 +244,15 @@ private:
 
 public:
 
-	void setRegisterRtcOutPortFn(boost::function2<bool, const char*, OutPortBase&> fn) {
-		registerRtcOutPortFn = fn;
-	}
-
-	void setRegisterRtcInPortFn(boost::function2<bool, const char*, InPortBase&> fn) {
-		registerRtcInPortFn = fn;
-	}
-
 	void doAdvertise() {
 		for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
 			rosAdvertiserFnList[i]();
+		}
+	}
+
+	void doStopAdvertise() {
+		for (int i = 0; i < rosPublisherList.size(); ++i) {
+			rosPublisherList[i]->shutdown();
 		}
 	}
 
@@ -259,12 +265,6 @@ public:
 	void doUnsubscribe() {
 		for (int i = 0; i < rosSubscriberList.size(); ++i) {
 			rosSubscriberList[i]->shutdown();
-		}
-	}
-
-	void doStopAdvertise() {
-		for (int i = 0; i < rosPublisherList.size(); ++i) {
-			rosPublisherList[i]->shutdown();
 		}
 	}
 

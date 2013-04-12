@@ -24,12 +24,6 @@ Hybrid::~Hybrid() {
 }
 
 RTC::ReturnCode_t Hybrid::onInitialize() {
-	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Hybrid::addOutPort, this, _1, _2);
-	setRegisterRtcOutPortFn(addOutPortFn);
-
-	boost::function2<bool, const char*, InPortBase&> addInPortFn = boost::bind(&Hybrid::addInPort, this, _1, _2);
-	setRegisterRtcInPortFn(addInPortFn);
-
 	init();
 	return RTC::RTC_OK;
 }
