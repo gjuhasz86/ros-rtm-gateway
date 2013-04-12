@@ -32,6 +32,8 @@ using namespace RTC;
 class Gateway: public RTC::DataFlowComponentBase {
 private:
 
+	GatewayFactory::Config<Gateway> config;
+
 	std::vector<boost::function0<void> > rosSubscriberFnList;
 	std::vector<boost::function0<void> > rosAdvertiserFnList;
 

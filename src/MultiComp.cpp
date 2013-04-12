@@ -5,7 +5,7 @@
 #include "Gateway.h"
 #include "CoutLong.h"
 #include "CoutString.h"
-
+/*
 static const char* hybrid_spec[] = { //
 		//
 				"implementation_id", "Hybrid", //
@@ -89,5 +89,9 @@ int main(int argc, char** argv) {
 	createComp(argc,argv,MyModuleInit2,false);
 	createComp(argc,argv,MyModuleInit3,true);
 
+	return 0;
+}
+*/
+int main(int argc, char** argv) {
 	return 0;
 }

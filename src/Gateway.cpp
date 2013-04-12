@@ -4,12 +4,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Constructor and Destructor
 
-Gateway::Gateway(RTC::Manager* manager) :
-		RTC::DataFlowComponentBase(manager) {
-}
-
 Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config<Gateway>* config) :
-		RTC::DataFlowComponentBase(manager) {
+		RTC::DataFlowComponentBase(manager), config(*config){
 }
 
 Gateway::~Gateway() {
