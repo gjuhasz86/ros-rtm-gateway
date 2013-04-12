@@ -6,6 +6,27 @@
 #include "CoutLong.h"
 #include "CoutString.h"
 
+static const char* hybrid_spec[] = { //
+		//
+				"implementation_id", "Hybrid", //
+				"type_name", "Hybrid", //
+				"description", "A hybrid ROS RTC module", //
+				"version", "1.0.0", //
+				"vendor", "Gabor Juhasz", //
+				"category", "Category", //
+				"activity_type", //
+				"PERIODIC", //
+				"kind", "DataFlowComponent", //
+				"max_instance", "1", //
+				"language", "C++", //
+				"lang_type", "compile", //
+				"" };
+
+void HybridInit(RTC::Manager* manager) {
+	coil::Properties profile(hybrid_spec);
+	manager->registerFactory(profile, RTC::Create<Gateway>, RTC::Delete<Gateway>);
+}
+
 void MyModuleInit(RTC::Manager* manager) {
 	std::cout << "Starting Gateway" << std::endl;
 	HybridInit(manager);

@@ -25,70 +25,9 @@
 #include "std_msgs/Int32.h"
 #include "std_msgs/String.h"
 
+#include "GatewayHelper.h"
+
 using namespace RTC;
-
-void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
-	//std::cout << "convert called" << std::endl;
-	out.data = in->data;
-}
-
-void convert2(const boost::shared_ptr<std_msgs::String const>& in, TimedString& out) {
-	out.data = in->data.c_str();
-}
-
-void convert3(const TimedLong& in, std_msgs::Int32& out) {
-	out.data = in.data;
-}
-
-template<class RtmType>
-struct RtmToRosLink {
-	RtmToRosLink(const std::string name) :
-			name(name), rtcInPort(name.c_str(), rtcInPortBuffer) {
-	}
-	std::string name;
-	RTC::InPort<RtmType> rtcInPort;
-	RtmType rtcInPortBuffer;
-	ros::Publisher rosPublisher;
-};
-
-template<class RtmType>
-struct RosToRtmLink {
-	RosToRtmLink(const std::string name) :
-			name(name), rtcOutPort(name.c_str(), rtcOutPortBuffer) {
-	}
-	std::string name;
-	RTC::OutPort<RtmType> rtcOutPort;
-	RtmType rtcOutPortBuffer;
-	ros::Subscriber rosSubscriber;
-};
-
-template<class RosType, class RtmType>
-struct RosToRtmConverter {
-public:
-	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert,
-			boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> const callback) :
-			convert(convert), callback(callback), hasCallback(true) {
-	}
-
-	RosToRtmConverter(boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert) :
-			convert(convert), hasCallback(false) {
-	}
-
-	boost::function2<void, const boost::shared_ptr<RosType const>&, RtmType&> convert;
-
-	bool const hasCallback;
-	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
-};
-
-void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out, const RosToRtmLink<TimedLong>& link) {
-	std::cout << "[";
-	std::cout << link.name.c_str();
-	std::cout << "] : [";
-	std::cout << boost::lexical_cast<std::string>(in->data).c_str();
-	std::cout << "]->[";
-	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
-	std::cout << std::endl;
-}
 
 class Gateway: public RTC::DataFlowComponentBase {
 private:
@@ -109,6 +48,7 @@ private:
 
 public:
 	Gateway(RTC::Manager* manager);
+	Gateway(RTC::Manager* manager, GatewayFactory::Config<Gateway>* config);
 
 	~Gateway();
 
@@ -178,7 +118,6 @@ protected:
 	template<class RtmType>
 	void writeToRtcPort(OutPort<RtmType>* outPort);
 
-
 	void doAdvertise();
 	void doStopAdvertise();
 	void doSubscibe();
@@ -186,9 +125,11 @@ protected:
 	void onExec();
 };
 
+
+/*
 extern "C" {
-DLL_EXPORT void HybridInit(RTC::Manager* manager);
+	DLL_EXPORT void HybridInit(RTC::Manager* manager);
 }
 ;
-
+*/
 #endif // GATEWAY_H

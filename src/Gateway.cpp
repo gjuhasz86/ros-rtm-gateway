@@ -1,25 +1,14 @@
 #include "Gateway.h"
 
-static const char* hybrid_spec[] = { //
-		//
-				"implementation_id", "Hybrid", //
-				"type_name", "Hybrid", //
-				"description", "A hybrid ROS RTC module", //
-				"version", "1.0.0", //
-				"vendor", "Gabor Juhasz", //
-				"category", "Category", //
-				"activity_type", //
-				"PERIODIC", //
-				"kind", "DataFlowComponent", //
-				"max_instance", "1", //
-				"language", "C++", //
-				"lang_type", "compile", //
-				"" };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constructor and Destructor
 
 Gateway::Gateway(RTC::Manager* manager) :
+		RTC::DataFlowComponentBase(manager) {
+}
+
+Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config<Gateway>* config) :
 		RTC::DataFlowComponentBase(manager) {
 }
 
@@ -56,9 +45,9 @@ RTC::ReturnCode_t Gateway::onExecute(RTC::UniqueId ec_id) {
 // Protected methods - methods specific to the gateway component
 
 void Gateway::init() {
-	RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 
-	createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+	//createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 //		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
 //		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
 	//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
@@ -181,6 +170,7 @@ void Gateway::writeToRtcPort(OutPort<RtmType>* outPort) {
 	outPort->write();
 }
 
+
 void Gateway::doAdvertise() {
 	for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
 		rosAdvertiserFnList[i]();
@@ -211,6 +201,20 @@ void Gateway::onExec() {
 	}
 }
 
+template <class _New>
+RTObject_impl* Create(Manager* manager)
+{
+  return new _New(manager);
+}
+
+template <class _Delete>
+void Delete(RTObject_impl* rtc)
+{
+  delete rtc;
+}
+
+
+/*
 extern "C" {
 
 void HybridInit(RTC::Manager* manager) {
@@ -221,3 +225,4 @@ void HybridInit(RTC::Manager* manager) {
 }
 ;
 
+*/
