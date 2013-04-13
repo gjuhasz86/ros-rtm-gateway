@@ -43,6 +43,8 @@
 
 #include "GatewayHelper.h"
 
+
+
 template<class RtmType>
 struct RtmToRosLink {
 	RtmToRosLink(const std::string name) :
@@ -83,15 +85,25 @@ public:
 	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
 };
 
+//TODO remove this
+void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out) {
+	out.data = in->data;
+}
+
+//TODO remove this
+void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out, const RosToRtmLink<RTC::TimedLong>& link) {
+	std::cout << "[";
+	std::cout << link.name.c_str();
+	std::cout << "] : [";
+	std::cout << boost::lexical_cast<std::string>(in->data).c_str();
+	std::cout << "]->[";
+	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
+	std::cout << std::endl;
+}
+
 namespace GatewayFactory {
 
 	class Config {
-	public:
-		Config(const char** gateway_spec) :
-				hybrid_spec(gateway_spec) {
-		}
-
-		const char** hybrid_spec;
 
 	public:
 		std::vector<boost::function0<void> > rosSubscriberFnList;
@@ -113,6 +125,8 @@ namespace GatewayFactory {
          */
         boost::function2<bool, const char*, RTC::OutPortBase&> registerRtcOutPortFn;
 
+        std::vector<boost::function0<void> > registerRtcOutPortFnList;
+
         /*!
          * A function to be called to add in port to the RTC.
          */
@@ -120,6 +134,9 @@ namespace GatewayFactory {
 
 	public:
 		void init(){
+			RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
+			createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
+
 			//RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
 
 			//createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
@@ -139,9 +156,12 @@ namespace GatewayFactory {
 				RosToRtmConverter<RosType, RtmType>& converter)
 		{
 
-		    RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		    registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
-		    boost::bind(registerRtcOutPortFn, name.c_str(), link->rtcOutPort);
+		    //RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
+		    //registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
+
+			boost::function0<void> fn;
+		    fn = boost::bind(&Config::prepareCreateNewRosToRtmLink<RosType, RtmType>, this, name, converter);
+		    registerRtcOutPortFnList.push_back(fn);
 
 		    //registerRtcOutPortFnList.push_back(registerRtcOutPortFn);
 			//registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
@@ -149,10 +169,23 @@ namespace GatewayFactory {
 			//registerRtcOutPortFn();
 			//fn(name.c_str(), link->rtcOutPort);
 
+			//boost::function0<void> rosSubscriberFn;
+			//rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
+			//rosSubscriberFnList.push_back(rosSubscriberFn);
+		}
+
+		template<class RosType, class RtmType>
+		void prepareCreateNewRosToRtmLink(const std::string& name,
+				RosToRtmConverter<RosType, RtmType>& converter)
+		{
+		    RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
+		    registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
+
 			boost::function0<void> rosSubscriberFn;
 			rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 			rosSubscriberFnList.push_back(rosSubscriberFn);
 		}
+
 
 		/*!
 		 * Links an RTC in port to a ROS topic.
@@ -269,6 +302,14 @@ namespace GatewayFactory {
 		 registerRtcInPortFn = fn;
 		 }
 
+		 void doRegisterRtcOutPort() {
+		 	for (int i = 0; i < registerRtcOutPortFnList.size(); ++i) {
+		 		registerRtcOutPortFnList[i]();
+		 	}
+		 }
+
+
+
 		 void doAdvertise() {
 		 	for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
 		 		rosAdvertiserFnList[i]();
@@ -303,7 +344,7 @@ namespace GatewayFactory {
 		 	}
 		 }
 	};
-
+/*
 	template<class _New>
 	RTC::RTObject_impl* Create(RTC::Manager* manager, Config* config) {
 		return new _New(manager, config);
@@ -348,7 +389,7 @@ namespace GatewayFactory {
 		manager->activateManager();
 		manager->runManager(!block);
 	}
-
+*/
 }
 
 

@@ -52,16 +52,45 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << std::endl;
 }
 */
+
+void HybridInit(RTC::Manager* manager) {
+        coil::Properties profile(gateway_spec);
+        manager->registerFactory(profile, RTC::Create<Gateway>, RTC::Delete<Gateway>);
+}
+
+void MyModuleInit(RTC::Manager* manager) {
+        std::cout << "Starting Hybrid" << std::endl;
+        HybridInit(manager);
+        RTC::RtcBase* comp;
+
+        comp = manager->createComponent("Hybrid");
+
+        if (comp == NULL) {
+                std::cerr << "Component create failed." << std::endl;
+                abort();
+        }
+
+        return;
+}
+
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
-	GatewayFactory::Config* config = new GatewayFactory::Config(gateway_spec);
+	//GatewayFactory::Config* config = new GatewayFactory::Config(gateway_spec);
 
 	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 	//config->createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
-	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
+	//GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
+
+    RTC::Manager* manager;
+    manager = RTC::Manager::init(argc, argv);
+    manager->init(argc, argv);
+    manager->setModuleInitProc(MyModuleInit);
+    manager->activateManager();
+    manager->runManager();
+
 
 	return 0;
 }
