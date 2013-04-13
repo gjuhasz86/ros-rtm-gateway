@@ -29,6 +29,23 @@
 
 using namespace RTC;
 
+
+static const char* tmp_spec[] = { //
+		//
+				"implementation_id", "Hybrid", //
+				"type_name", "Hybrid", //
+				"description", "A hybrid ROS RTC module", //
+				"version", "1.0.0", //
+				"vendor", "Gabor Juhasz", //
+				"category", "Category", //
+				"activity_type", //
+				"PERIODIC", //
+				"kind", "DataFlowComponent", //
+				"max_instance", "1", //
+				"language", "C++", //
+				"lang_type", "compile", //
+				"" };
+
 class Gateway: public RTC::DataFlowComponentBase {
 private:
 
@@ -36,8 +53,8 @@ private:
 
 
 public:
-	//Gateway(RTC::Manager* manager);
 	Gateway(RTC::Manager* manager);
+	Gateway(RTC::Manager* manager, GatewayFactory::Config* config);
 
 	~Gateway();
 
@@ -61,7 +78,13 @@ extern "C" {
 // IMPLEMENTATION
 
 Gateway::Gateway(RTC::Manager* manager) :
-		RTC::DataFlowComponentBase(manager){
+                RTC::DataFlowComponentBase(manager), config(*(new GatewayFactory::Config(tmp_spec))){
+	std::cout << "this sucks" << std::endl;
+}
+
+Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config* config) :
+                RTC::DataFlowComponentBase(manager), config(*config){
+	std::cout << "this is good" << std::endl;
 }
 
 Gateway::~Gateway() {
@@ -83,7 +106,7 @@ RTC::ReturnCode_t Gateway::onInitialize() {
 	//config.createRtcOutPorts(this);
 	//config.createRtcInPorts(this);
 	init();
-	config.init();
+	//config.init();
 	config.doRegisterRtcOutPort();
 	return RTC::RTC_OK;
 }

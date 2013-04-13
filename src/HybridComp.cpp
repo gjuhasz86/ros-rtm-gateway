@@ -29,7 +29,7 @@ static const char* gateway_spec[] = { //
 				"lang_type", "compile", //
 				"" };
 
-/*
+
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
 	out.data = in->data;
 }
@@ -51,16 +51,36 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
 	std::cout << std::endl;
 }
-*/
 
-void HybridInit(RTC::Manager* manager) {
+GatewayFactory::Config* config2;
+
+
+template<class _New>
+RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
+	GatewayFactory::Config* config;
+	config = new GatewayFactory::Config(gateway_spec);
+	return new _New(manager, config);
+}
+
+template<class _New>
+RTC::RTObject_impl* SmartCreateGateway(RTC::Manager* manager, GatewayFactory::Config* config) {
+	return new _New(manager, config);
+}
+
+
+void HybridInit(RTC::Manager* manager, GatewayFactory::Config* config) {
         coil::Properties profile(gateway_spec);
-        manager->registerFactory(profile, RTC::Create<Gateway>, RTC::Delete<Gateway>);
+
+		boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&SmartCreateGateway<Gateway>, _1, config);
+		RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
+
+		manager->registerFactory(profile, CreateGateway<Gateway>, RTC::Delete<Gateway>);
 }
 
 void MyModuleInit(RTC::Manager* manager) {
         std::cout << "Starting Hybrid" << std::endl;
-        HybridInit(manager);
+
+        HybridInit(manager, config2);
         RTC::RtcBase* comp;
 
         comp = manager->createComponent("Hybrid");
@@ -77,10 +97,10 @@ int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
-	//GatewayFactory::Config* config = new GatewayFactory::Config(gateway_spec);
+	config2 = new GatewayFactory::Config(gateway_spec);
 
-	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
-	//config->createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+	RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+	config2->addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
 	//GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
 
