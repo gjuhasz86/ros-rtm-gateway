@@ -56,12 +56,12 @@ int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
-	GatewayFactory::Config<Gateway>* config = new GatewayFactory::Config<Gateway>(gateway_spec);
+	GatewayFactory::Config* config = new GatewayFactory::Config(gateway_spec);
 
 	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 	//config->createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
-	GatewayFactory::createNewGateway(argc, argv, config, true);
+	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
 
 	return 0;
 }

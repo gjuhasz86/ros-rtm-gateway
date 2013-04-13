@@ -32,12 +32,12 @@ using namespace RTC;
 class Gateway: public RTC::DataFlowComponentBase {
 private:
 
-	GatewayFactory::Config<Gateway> config;
+	GatewayFactory::Config config;
 
 
 public:
 	//Gateway(RTC::Manager* manager);
-	Gateway(RTC::Manager* manager, GatewayFactory::Config<Gateway>* config);
+	Gateway(RTC::Manager* manager, GatewayFactory::Config* config);
 
 	~Gateway();
 
@@ -60,7 +60,7 @@ extern "C" {
 ////////////////////////////////////////////////////////////////////////
 // IMPLEMENTATION
 
-Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config<Gateway>* config) :
+Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config* config) :
 		RTC::DataFlowComponentBase(manager), config(*config){
 }
 
@@ -90,7 +90,9 @@ void Gateway::init(){
 	RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
 
 	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
-	config.createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1, addOutPortFn);
+	config.setRegisterRtcOutPortFn(addOutPortFn);
+
+	config.createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
 	//config.createNewRosToRtmLink()
 }
 
