@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include "Gateway.h"
 
-static const char* hybrid_spec[] = { //
+static const char* gateway_spec[] = { //
 		//
 				"implementation_id", "Hybrid", //
 				"type_name", "Hybrid", //
@@ -29,6 +29,7 @@ static const char* hybrid_spec[] = { //
 				"lang_type", "compile", //
 				"" };
 
+/*
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
 	out.data = in->data;
 }
@@ -50,17 +51,17 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
 	std::cout << std::endl;
 }
-
+*/
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
-	//GatewayFactory::Config<Gateway>* config = new GatewayFactory::Config<Gateway>(hybrid_spec);
+	GatewayFactory::Config<Gateway>* config = new GatewayFactory::Config<Gateway>(gateway_spec);
 
-	RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 	//config->createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
-	//GatewayFactory::createNewGateway(argc, argv, config, true);
+	GatewayFactory::createNewGateway(argc, argv, config, true);
 
 	return 0;
 }

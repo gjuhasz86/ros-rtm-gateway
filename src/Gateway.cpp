@@ -15,32 +15,34 @@ Gateway::~Gateway() {
 // Public methods - methods comes with the RT component
 
 RTC::ReturnCode_t Gateway::onInitialize() {
+	//config.createRtcOutPorts(this);
+	//config.createRtcInPorts(this);
 	init();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Gateway::onActivated(RTC::UniqueId ec_id) {
-	//doSubscibe();
-	//doAdvertise();
+	config.doSubscibe();
+	config.doAdvertise();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Gateway::onDeactivated(RTC::UniqueId ec_id) {
-	//doUnsubscribe();
-	//doStopAdvertise();
+	config.doUnsubscribe();
+	config.doStopAdvertise();
 	return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t Gateway::onExecute(RTC::UniqueId ec_id) {
 	ros::spinOnce();
-	//onExec();
+	config.onExec();
 	return RTC::RTC_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Protected methods - methods specific to the gateway component
 
-
+/*
 template <class _New>
 RTObject_impl* Create(Manager* manager)
 {
@@ -52,7 +54,7 @@ void Delete(RTObject_impl* rtc)
 {
   delete rtc;
 }
-
+*/
 
 /*
 extern "C" {

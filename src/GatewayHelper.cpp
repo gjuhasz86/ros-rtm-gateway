@@ -1,11 +1,15 @@
 #include "GatewayHelper.h"
 
-void GatewayFactory::Config::init() {
-	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+#include "std_msgs/Int32.h"
+#include "BasicDataTypeStub.h"
 
-	//createNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
-//		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
-//		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
+template<class Component>
+void GatewayFactory::Config<Component>::init() {
+	//RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
+
+	//createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
+	//		createNewRosToRtmLink<std_msgs::String, TimedString>("chatterString", &convert2);
+	//		createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort1", &convert3);
 	//createNewRtmToRosLink<TimedLong, std_msgs::Int32>("inPort2", &convert3);
 }
 
@@ -15,11 +19,13 @@ void GatewayFactory::Config::init() {
  * Note: RtmType has to have a parameterless constructor.
  * TODO: should the name be reference?
  */
+template<class Component>
 template<class RosType, class RtmType>
-void GatewayFactory::Config::createNewRosToRtmLink(const std::string& name, RosToRtmConverter<RosType, RtmType>& converter) {
+void GatewayFactory::Config<Component>::createNewRosToRtmLink(const std::string& name,
+		RosToRtmConverter<RosType, RtmType>& converter) {
 
 	RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-	//addOutPort(name.c_str(), link->rtcOutPort);
+	registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 	boost::function0<void> rosSubscriberFn;
 	rosSubscriberFn = boost::bind(&subscribeToRosTopic<RosType, RtmType>, this, link, converter);
@@ -31,15 +37,15 @@ void GatewayFactory::Config::createNewRosToRtmLink(const std::string& name, RosT
  *
  * Note: RtmType has to have a parameterless constructor.
  */
+template<class Component>
 template<class RtmType, class RosType>
-void GatewayFactory::Config::createNewRtmToRosLink(const std::string& name,
+void GatewayFactory::Config<Component>::createNewRtmToRosLink(const std::string& name,
 		boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 	RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
-	//addInPort(name.c_str(), link->rtcInPort);
+	registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
-	boost::function0<void> copyFromRtcToRosFn = boost::bind(&copyFromRtcToRos<RtmType, RosType>, this, link,
-			convertFn);
+	boost::function0<void> copyFromRtcToRosFn = boost::bind(&copyFromRtcToRos<RtmType, RosType>, this, link, convertFn);
 	copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 	boost::function0<void> rosAdvertiserFn;
@@ -51,8 +57,10 @@ void GatewayFactory::Config::createNewRtmToRosLink(const std::string& name,
  * This member function subscribes to a ROS topic, and links its input to the given RTC out port.
  * It also requires a converter function which converts the input data from ROS to the output type of RTC.
  */
+template<class Component>
 template<class RosType, class RtmType>
-void GatewayFactory::Config::subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
+void GatewayFactory::Config<Component>::subscribeToRosTopic(RosToRtmLink<RtmType>* link,
+		RosToRtmConverter<RosType, RtmType>& converter) {
 	link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
 			boost::bind(&copyFromRosToRtc<RosType, RtmType>, this, _1, link, converter));
 	rosSubscriberList.push_back(&link->rosSubscriber);
@@ -61,8 +69,9 @@ void GatewayFactory::Config::subscribeToRosTopic(RosToRtmLink<RtmType>* link, Ro
 /*!
  * This member function advertises a ROS topic and links the given RTC in port to the topic.
  */
+template<class Component>
 template<class RosType, class RtmType>
-void GatewayFactory::Config::advertiseRosTopic(RtmToRosLink<RtmType>* link) {
+void GatewayFactory::Config<Component>::advertiseRosTopic(RtmToRosLink<RtmType>* link) {
 	link->rosPublisher = n.advertise<RosType>(link->name, 1000);
 	rosPublisherList.push_back(&link->rosPublisher);
 }
@@ -71,9 +80,10 @@ void GatewayFactory::Config::advertiseRosTopic(RtmToRosLink<RtmType>* link) {
  * This member function is a callback function for the ROS node. It is called whenever a message arrives
  * on the ROS topic.
  */
+template<class Component>
 template<class RosType, class RtmType>
-void GatewayFactory::Config::copyFromRosToRtc(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
-		RosToRtmConverter<RosType, RtmType> converter) {
+void GatewayFactory::Config<Component>::copyFromRosToRtc(const boost::shared_ptr<RosType const>& msgIn,
+		RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType> converter) {
 
 	converter.convert(msgIn, link->rtcOutPortBuffer);
 
@@ -89,8 +99,9 @@ void GatewayFactory::Config::copyFromRosToRtc(const boost::shared_ptr<RosType co
  * This member function is a callback function for the RTC port. It is called periodically, and passes the
  * Link object containing an RTC port, and a ROS publisher.
  */
+template<class Component>
 template<class RtmType, class RosType>
-void GatewayFactory::Config::copyFromRtcToRos(RtmToRosLink<RtmType>* link,
+void GatewayFactory::Config<Component>::copyFromRtcToRos(RtmToRosLink<RtmType>* link,
 		boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 	RTC::InPort<RtmType>* inPort = &link->rtcInPort;
@@ -108,8 +119,9 @@ void GatewayFactory::Config::copyFromRtcToRos(RtmToRosLink<RtmType>* link,
  * Checks whether new data has arrived to the given RTC port. If it has, it loads the data into the buffer
  * associated with the port.
  */
+template<class Component>
 template<class RtmType>
-bool GatewayFactory::Config::readFromRtcPort(RTC::InPort<RtmType>* inPort) {
+bool GatewayFactory::Config<Component>::readFromRtcPort(RTC::InPort<RtmType>* inPort) {
 	if (inPort->isNew()) {
 		inPort->read();
 		return true;
@@ -121,37 +133,42 @@ bool GatewayFactory::Config::readFromRtcPort(RTC::InPort<RtmType>* inPort) {
 /*!
  * Sends the data to the given port from the buffer associated with it.
  */
+template<class Component>
 template<class RtmType>
-void GatewayFactory::Config::writeToRtcPort(RTC::OutPort<RtmType>* outPort) {
+void GatewayFactory::Config<Component>::writeToRtcPort(RTC::OutPort<RtmType>* outPort) {
 	outPort->write();
 }
 
-
-void GatewayFactory::Config::doAdvertise() {
+template<class Component>
+void GatewayFactory::Config<Component>::doAdvertise() {
 	for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
 		rosAdvertiserFnList[i]();
 	}
 }
 
-void GatewayFactory::Config::doStopAdvertise() {
+template<class Component>
+void GatewayFactory::Config<Component>::doStopAdvertise() {
 	for (int i = 0; i < rosPublisherList.size(); ++i) {
 		rosPublisherList[i]->shutdown();
 	}
 }
 
-void GatewayFactory::Config::doSubscibe() {
+template<class Component>
+void GatewayFactory::Config<Component>::doSubscibe() {
 	for (int i = 0; i < rosSubscriberFnList.size(); ++i) {
 		rosSubscriberFnList[i]();
 	}
 }
 
-void GatewayFactory::Config::doUnsubscribe() {
+template<class Component>
+void GatewayFactory::Config<Component>::doUnsubscribe() {
 	for (int i = 0; i < rosSubscriberList.size(); ++i) {
 		rosSubscriberList[i]->shutdown();
 	}
 }
 
-void GatewayFactory::Config::onExec() {
+template<class Component>
+void GatewayFactory::Config<Component>::onExec() {
 	for (int i = 0; i < copyFromRtcToRosFnList.size(); ++i) {
 		copyFromRtcToRosFnList[i]();
 	}

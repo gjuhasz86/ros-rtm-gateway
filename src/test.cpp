@@ -43,7 +43,19 @@ struct Wrapper {
 	Num num;
 };
 
+template<class T>
+template<class E>
+void MyTemplated<T>::doIt(E e){
+	std::cout << e.c_str();
+	std::cout << std::endl;
+}
+
 int main(int argc, char** argv) {
+	MyTemplated<std::string>* mt = new MyTemplated<std::string>();
+	std::string s = "blah";
+	mt->doIt(s);
+
+
 	std::vector<Wrapper> list;
 	Wrapper w;
 	int* numPtr = &w.num.num;
