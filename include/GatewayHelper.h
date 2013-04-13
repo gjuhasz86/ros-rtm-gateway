@@ -43,8 +43,6 @@
 
 #include "GatewayHelper.h"
 
-
-
 template<class RtmType>
 struct RtmToRosLink {
 	RtmToRosLink(const std::string name) :
@@ -91,7 +89,8 @@ void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong
 }
 
 //TODO remove this
-void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out, const RosToRtmLink<RTC::TimedLong>& link) {
+void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out,
+		const RosToRtmLink<RTC::TimedLong>& link) {
 	std::cout << "[";
 	std::cout << link.name.c_str();
 	std::cout << "] : [";
@@ -120,22 +119,22 @@ namespace GatewayFactory {
 
 		ros::NodeHandle n;
 
-        /*!
-         * A function to be called to add out port to the RTC.
-         */
-        boost::function2<bool, const char*, RTC::OutPortBase&> registerRtcOutPortFn;
+		/*!
+		 * A function to be called to add out port to the RTC.
+		 */
+		boost::function2<void, const char*, RTC::OutPortBase*> registerRtcOutPortFn;
 
-        std::vector<boost::function0<void> > registerRtcOutPortFnList;
+		std::vector<boost::function0<void> > registerRtcOutPortSimpleFnList;
 
-        /*!
-         * A function to be called to add in port to the RTC.
-         */
-        boost::function2<bool, const char*, RTC::InPortBase&> registerRtcInPortFn;
+		/*!
+		 * A function to be called to add in port to the RTC.
+		 */
+		boost::function2<bool, const char*, RTC::InPortBase&> registerRtcInPortFn;
 
 	public:
-		void init(){
+		void init() {
 			RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
-			createNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
+			addNewRosToRtmLink<std_msgs::Int32, RTC::TimedLong>("chatterInt1", c1);
 
 			//RosToRtmConverter<std_msgs::Int32, RTC::TimedLong> c1(&convert1, &callback);
 
@@ -152,41 +151,40 @@ namespace GatewayFactory {
 		 * TODO: should the name be reference?
 		 */
 		template<class RosType, class RtmType>
-		void createNewRosToRtmLink(const std::string& name,
-				RosToRtmConverter<RosType, RtmType>& converter)
-		{
+		void addNewRosToRtmLink(const std::string& name, RosToRtmConverter<RosType, RtmType>& converter) {
 
-		    //RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		    //registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
+			//registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
-			boost::function0<void> fn;
-		    fn = boost::bind(&Config::prepareCreateNewRosToRtmLink<RosType, RtmType>, this, name, converter);
-		    registerRtcOutPortFnList.push_back(fn);
+			//boost::function0<void> fn;
+			//fn = boost::bind(&Config::prepareCreateNewRosToRtmLink<RosType, RtmType>, this, name, converter);
 
-		    //registerRtcOutPortFnList.push_back(registerRtcOutPortFn);
+			RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
+
+			boost::function0<void> fn = boost::bind(registerRtcOutPortFn, name.c_str(), &link->rtcOutPort);
+			registerRtcOutPortSimpleFnList.push_back(fn);
+
+			//registerRtcOutPortFnList.push_back(registerRtcOutPortFn);
 			//registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 			//registerRtcOutPortFn();
 			//fn(name.c_str(), link->rtcOutPort);
-
-			//boost::function0<void> rosSubscriberFn;
-			//rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
-			//rosSubscriberFnList.push_back(rosSubscriberFn);
-		}
-
-		template<class RosType, class RtmType>
-		void prepareCreateNewRosToRtmLink(const std::string& name,
-				RosToRtmConverter<RosType, RtmType>& converter)
-		{
-		    RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
-		    registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
 			boost::function0<void> rosSubscriberFn;
 			rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 			rosSubscriberFnList.push_back(rosSubscriberFn);
 		}
 
+		/*
+		 template<class RosType, class RtmType>
+		 void prepareCreateNewRosToRtmLink(const std::string& name, RosToRtmConverter<RosType, RtmType>& converter) {
+		 RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
+		 registerRtcOutPortFn(name.c_str(), link->rtcOutPort);
 
+		 boost::function0<void> rosSubscriberFn;
+		 rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
+		 rosSubscriberFnList.push_back(rosSubscriberFn);
+		 }
+		 */
 		/*!
 		 * Links an RTC in port to a ROS topic.
 		 *
@@ -203,7 +201,8 @@ namespace GatewayFactory {
 			//registerRtcInPortFnList.push_back(registerRtcInPortFn);
 			//registerRtcInPortFn(name.c_str(), link->rtcInPort);
 
-			boost::function0<void> copyFromRtcToRosFn = boost::bind(&copyFromRtcToRos<RtmType, RosType>, this, link, convertFn);
+			boost::function0<void> copyFromRtcToRosFn = boost::bind(&copyFromRtcToRos<RtmType, RosType>, this, link,
+					convertFn);
 			copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 			boost::function0<void> rosAdvertiserFn;
@@ -217,8 +216,7 @@ namespace GatewayFactory {
 		 */
 
 		template<class RosType, class RtmType>
-		void subscribeToRosTopic(RosToRtmLink<RtmType>* link,
-				RosToRtmConverter<RosType, RtmType>& converter) {
+		void subscribeToRosTopic(RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType>& converter) {
 			link->rosSubscriber = n.subscribe<RosType>(link->name, 1000,
 					boost::bind(&Config::copyFromRosToRtc<RosType, RtmType>, this, _1, link, converter));
 			rosSubscriberList.push_back(&link->rosSubscriber);
@@ -238,8 +236,8 @@ namespace GatewayFactory {
 		 * on the ROS topic.
 		 */
 		template<class RosType, class RtmType>
-		void copyFromRosToRtc(const boost::shared_ptr<RosType const>& msgIn,
-				RosToRtmLink<RtmType>* link, RosToRtmConverter<RosType, RtmType> converter) {
+		void copyFromRosToRtc(const boost::shared_ptr<RosType const>& msgIn, RosToRtmLink<RtmType>* link,
+				RosToRtmConverter<RosType, RtmType> converter) {
 
 			converter.convert(msgIn, link->rtcOutPortBuffer);
 
@@ -256,8 +254,7 @@ namespace GatewayFactory {
 		 * Link object containing an RTC port, and a ROS publisher.
 		 */
 		template<class RtmType, class RosType>
-		void copyFromRtcToRos(RtmToRosLink<RtmType>* link,
-				boost::function2<void, const RtmType&, RosType&> convertFn) {
+		void copyFromRtcToRos(RtmToRosLink<RtmType>* link, boost::function2<void, const RtmType&, RosType&> convertFn) {
 
 			RTC::InPort<RtmType>* inPort = &link->rtcInPort;
 			bool hasResult = readFromRtcPort<RtmType>(inPort);
@@ -294,103 +291,102 @@ namespace GatewayFactory {
 
 	public:
 
-		 void setRegisterRtcOutPortFn(boost::function2<bool, const char*, RTC::OutPortBase&> fn) {
-		 registerRtcOutPortFn = fn;
-		 }
-
-		 void setRegisterRtcInPortFn(boost::function2<bool, const char*, RTC::InPortBase&> fn) {
-		 registerRtcInPortFn = fn;
-		 }
-
-		 void doRegisterRtcOutPort() {
-		 	for (int i = 0; i < registerRtcOutPortFnList.size(); ++i) {
-		 		registerRtcOutPortFnList[i]();
-		 	}
-		 }
-
-
-
-		 void doAdvertise() {
-		 	for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
-		 		rosAdvertiserFnList[i]();
-		 	}
-		 }
-
-
-		 void doStopAdvertise() {
-		 	for (int i = 0; i < rosPublisherList.size(); ++i) {
-		 		rosPublisherList[i]->shutdown();
-		 	}
-		 }
-
-
-		 void doSubscibe() {
-		 	for (int i = 0; i < rosSubscriberFnList.size(); ++i) {
-		 		rosSubscriberFnList[i]();
-		 	}
-		 }
-
-
-		 void doUnsubscribe() {
-		 	for (int i = 0; i < rosSubscriberList.size(); ++i) {
-		 		rosSubscriberList[i]->shutdown();
-		 	}
-		 }
-
-
-		 void onExec() {
-		 	for (int i = 0; i < copyFromRtcToRosFnList.size(); ++i) {
-		 		copyFromRtcToRosFnList[i]();
-		 	}
-		 }
-	};
-/*
-	template<class _New>
-	RTC::RTObject_impl* Create(RTC::Manager* manager, Config* config) {
-		return new _New(manager, config);
-	}
-
-	template<class Component>
-	void GatewayInit(RTC::Manager* manager, Config* config) {
-
-		coil::Properties profile(config->hybrid_spec);
-
-		boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&Create<Component>, _1, config);
-		RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
-
-		manager->registerFactory(profile, **newFn, RTC::Delete<Component>);
-	}
-
-	template<class Component>
-	void ModuleInit(RTC::Manager* manager, Config* config) {
-		std::cout << "Starting Gateway" << std::endl;
-		GatewayInit<Component>(manager, config);
-
-		RTC::RtcBase* comp;
-		comp = manager->createComponent("Gateway");
-
-		if (comp == NULL) {
-			std::cerr << "Component create failed." << std::endl;
-			abort();
+		void test(boost::function2<bool, const char*, RTC::OutPortBase&> fn, const char* name,
+				RTC::OutPortBase* outport) {
+			fn(name, *outport);
 		}
 
-		return;
-	}
+		void setRegisterRtcOutPortFn(boost::function2<bool, const char*, RTC::OutPortBase&> fn) {
+			boost::function2<void, const char*, RTC::OutPortBase*> func;
+			registerRtcOutPortFn = boost::bind(&Config::test, this, fn, _1, _2);
+		}
 
-	template<class Component>
-	void createNewGateway(int argc, char** argv, Config* config, bool block = true) {
-		RTC::Manager* manager;
-		manager = RTC::Manager::init(argc, argv);
-		manager->init(argc, argv);
+		void setRegisterRtcInPortFn(boost::function2<bool, const char*, RTC::InPortBase&> fn) {
+			registerRtcInPortFn = fn;
+		}
 
-		boost::function1<void, RTC::Manager*> mFn = boost::bind(&ModuleInit<Component>, _1, config);
-		RTC::ModuleInitProc* moduleInitProc = mFn.target<RTC::ModuleInitProc>();
-		manager->setModuleInitProc(**moduleInitProc);
-		manager->activateManager();
-		manager->runManager(!block);
-	}
-*/
+		void doRegisterRtcOutPort() {
+			for (int i = 0; i < registerRtcOutPortSimpleFnList.size(); ++i) {
+				registerRtcOutPortSimpleFnList[i]();
+			}
+		}
+
+		void doAdvertise() {
+			for (int i = 0; i < rosAdvertiserFnList.size(); ++i) {
+				rosAdvertiserFnList[i]();
+			}
+		}
+
+		void doStopAdvertise() {
+			for (int i = 0; i < rosPublisherList.size(); ++i) {
+				rosPublisherList[i]->shutdown();
+			}
+		}
+
+		void doSubscibe() {
+			for (int i = 0; i < rosSubscriberFnList.size(); ++i) {
+				rosSubscriberFnList[i]();
+			}
+		}
+
+		void doUnsubscribe() {
+			for (int i = 0; i < rosSubscriberList.size(); ++i) {
+				rosSubscriberList[i]->shutdown();
+			}
+		}
+
+		void onExec() {
+			for (int i = 0; i < copyFromRtcToRosFnList.size(); ++i) {
+				copyFromRtcToRosFnList[i]();
+			}
+		}
+	};
+/*
+ template<class _New>
+ RTC::RTObject_impl* Create(RTC::Manager* manager, Config* config) {
+ return new _New(manager, config);
+ }
+
+ template<class Component>
+ void GatewayInit(RTC::Manager* manager, Config* config) {
+
+ coil::Properties profile(config->hybrid_spec);
+
+ boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&Create<Component>, _1, config);
+ RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
+
+ manager->registerFactory(profile, **newFn, RTC::Delete<Component>);
+ }
+
+ template<class Component>
+ void ModuleInit(RTC::Manager* manager, Config* config) {
+ std::cout << "Starting Gateway" << std::endl;
+ GatewayInit<Component>(manager, config);
+
+ RTC::RtcBase* comp;
+ comp = manager->createComponent("Gateway");
+
+ if (comp == NULL) {
+ std::cerr << "Component create failed." << std::endl;
+ abort();
+ }
+
+ return;
+ }
+
+ template<class Component>
+ void createNewGateway(int argc, char** argv, Config* config, bool block = true) {
+ RTC::Manager* manager;
+ manager = RTC::Manager::init(argc, argv);
+ manager->init(argc, argv);
+
+ boost::function1<void, RTC::Manager*> mFn = boost::bind(&ModuleInit<Component>, _1, config);
+ RTC::ModuleInitProc* moduleInitProc = mFn.target<RTC::ModuleInitProc>();
+ manager->setModuleInitProc(**moduleInitProc);
+ manager->activateManager();
+ manager->runManager(!block);
+ }
+ */
 }
-
 
 #endif /* GATEWAYHELPER_H_ */
