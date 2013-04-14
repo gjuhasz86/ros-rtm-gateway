@@ -73,15 +73,17 @@ RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
 }
 
 
+template<class Component>
 void HybridInit(RTC::Manager* manager, GatewayFactory::Config* config) {
 	coil::Properties profile(gateway_spec);
-	manager->registerFactory(profile, CreateGateway<MyGateway>, RTC::Delete<MyGateway>);
+	manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
 }
 
+template<class Component>
 void MyModuleInit(RTC::Manager* manager) {
 	std::cout << "Starting Hybrid" << std::endl;
 
-	HybridInit(manager, config2);
+	HybridInit<Component>(manager, config2);
 	RTC::RtcBase* comp;
 
 	comp = manager->createComponent("Hybrid");
@@ -93,13 +95,13 @@ void MyModuleInit(RTC::Manager* manager) {
 
 	return;
 }
-
+template<class Component>
 void createNewGateway(int argc, char** argv, bool block = true) {
 	RTC::Manager* manager;
 	manager = RTC::Manager::init(argc, argv);
 	manager->init(argc, argv);
 
-	manager->setModuleInitProc(MyModuleInit);
+	manager->setModuleInitProc(MyModuleInit<Component>);
 	manager->activateManager();
 	manager->runManager(!block);
 }
@@ -114,7 +116,7 @@ int main(int argc, char** argv) {
 	//config2->addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
 	//GatewayFactory::createNewGateway<Gateway>(argc, argv, true);
-	createNewGateway(argc, argv, true);
+	createNewGateway<MyGateway>(argc, argv, true);
 
 	return 0;
 }
