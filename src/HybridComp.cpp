@@ -64,7 +64,7 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
  };
 
 
-GatewayFactory::Config* config2;
+//GatewayFactory::Config* config2;
 
 template<class _New>
 RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
@@ -74,7 +74,7 @@ RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
 
 
 template<class Component>
-void HybridInit(RTC::Manager* manager, GatewayFactory::Config* config) {
+void HybridInit(RTC::Manager* manager) {
 	coil::Properties profile(gateway_spec);
 	manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
 }
@@ -83,7 +83,7 @@ template<class Component>
 void MyModuleInit(RTC::Manager* manager) {
 	std::cout << "Starting Hybrid" << std::endl;
 
-	HybridInit<Component>(manager, config2);
+	HybridInit<Component>(manager);
 	RTC::RtcBase* comp;
 
 	comp = manager->createComponent("Hybrid");
