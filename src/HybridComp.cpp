@@ -12,23 +12,23 @@
 #include <string>
 #include <stdlib.h>
 #include "Gateway.h"
-
-static const char* gateway_spec[] = { //
-		//
-				"implementation_id", "Hybrid", //
-				"type_name", "Hybrid", //
-				"description", "A hybrid ROS RTC module", //
-				"version", "1.0.0", //
-				"vendor", "Gabor Juhasz", //
-				"category", "Category", //
-				"activity_type", //
-				"PERIODIC", //
-				"kind", "DataFlowComponent", //
-				"max_instance", "1", //
-				"language", "C++", //
-				"lang_type", "compile", //
-				"" };
-
+/*
+ static const char* gateway_spec[] = { //
+ //
+ "implementation_id", "Hybrid", //
+ "type_name", "Hybrid", //
+ "description", "A hybrid ROS RTC module", //
+ "version", "1.0.0", //
+ "vendor", "Gabor Juhasz", //
+ "category", "Category", //
+ "activity_type", //
+ "PERIODIC", //
+ "kind", "DataFlowComponent", //
+ "max_instance", "1", //
+ "language", "C++", //
+ "lang_type", "compile", //
+ "" };
+ */
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
 	out.data = in->data;
 }
@@ -51,60 +51,17 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << std::endl;
 }
 
- class MyGateway:public Gateway{
- public:
- MyGateway(RTC::Manager* manager) :
- Gateway(manager){
- }
-
- virtual void setUpPorts(){
- RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
- config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
- }
- };
-
-
-//GatewayFactory::Config* config2;
-
-template<class _New>
-RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
-	std::cout << "creating" << std::endl;
-	return new _New(manager);
-}
-
-
-template<class Component>
-void HybridInit(RTC::Manager* manager) {
-	coil::Properties profile(gateway_spec);
-	manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
-}
-
-template<class Component>
-void MyModuleInit(RTC::Manager* manager) {
-	std::cout << "Starting Hybrid" << std::endl;
-
-	HybridInit<Component>(manager);
-	RTC::RtcBase* comp;
-
-	comp = manager->createComponent("Hybrid");
-
-	if (comp == NULL) {
-		std::cerr << "Component create failed." << std::endl;
-		abort();
+class MyGateway: public Gateway {
+public:
+	MyGateway(RTC::Manager* manager) :
+			Gateway(manager) {
 	}
 
-	return;
-}
-template<class Component>
-void createNewGateway(int argc, char** argv, bool block = true) {
-	RTC::Manager* manager;
-	manager = RTC::Manager::init(argc, argv);
-	manager->init(argc, argv);
-
-	manager->setModuleInitProc(MyModuleInit<Component>);
-	manager->activateManager();
-	manager->runManager(!block);
-}
+	virtual void setUpPorts() {
+		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+		config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+	}
+};
 
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
@@ -116,7 +73,7 @@ int main(int argc, char** argv) {
 	//config2->addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
 	//GatewayFactory::createNewGateway<Gateway>(argc, argv, true);
-	createNewGateway<MyGateway>(argc, argv, true);
+	GatewayFactory::createNewGateway<MyGateway>(argc, argv, true);
 
 	return 0;
 }

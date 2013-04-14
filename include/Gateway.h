@@ -100,8 +100,6 @@ void Gateway::setUpPorts(){
 RTC::ReturnCode_t Gateway::onInitialize() {
 	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
 	config.setRegisterRtcOutPortFn(addOutPortFn);
-	//config.createRtcOutPorts(this);
-	//config.createRtcInPorts(this);
 	setUpPorts();
 	config.doRegisterRtcOutPort();
 	return RTC::RTC_OK;
