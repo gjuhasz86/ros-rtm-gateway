@@ -17,7 +17,7 @@ Gateway::~Gateway() {
 RTC::ReturnCode_t Gateway::onInitialize() {
 	//config.createRtcOutPorts(this);
 	//config.createRtcInPorts(this);
-	init();
+	setUpPorts();
 	return RTC::RTC_OK;
 }
 

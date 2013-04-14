@@ -47,7 +47,7 @@ static const char* tmp_spec[] = { //
 				"" };
 
 class Gateway: public RTC::DataFlowComponentBase {
-private:
+protected:
 
 	GatewayFactory::Config config;
 
@@ -63,7 +63,7 @@ public:
 	virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
 	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
 
-	virtual void init();
+	virtual void setUpPorts();
 };
 
 
@@ -82,9 +82,8 @@ Gateway::Gateway(RTC::Manager* manager) :
 	std::cout << "this sucks" << std::endl;
 }
 
-Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config* config) :
-                RTC::DataFlowComponentBase(manager), config(*config){
-	std::cout << "this is good" << std::endl;
+Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config* c) :
+                RTC::DataFlowComponentBase(manager), config(*c){
 }
 
 Gateway::~Gateway() {
@@ -94,19 +93,16 @@ Gateway::~Gateway() {
 // Public methods - methods comes with the RT component
 
 
-void Gateway::init(){
+void Gateway::setUpPorts(){
 
-	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
-	config.setRegisterRtcOutPortFn(addOutPortFn);
-
-	//config.createNewRosToRtmLink()
 }
 
 RTC::ReturnCode_t Gateway::onInitialize() {
+	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
+	config.setRegisterRtcOutPortFn(addOutPortFn);
 	//config.createRtcOutPorts(this);
 	//config.createRtcInPorts(this);
-	init();
-	//config.init();
+	setUpPorts();
 	config.doRegisterRtcOutPort();
 	return RTC::RTC_OK;
 }

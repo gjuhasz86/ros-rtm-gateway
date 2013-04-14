@@ -83,32 +83,37 @@ public:
 	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
 };
 /*
-//TODO remove this
-void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out) {
-	out.data = in->data;
+ //TODO remove this
+ void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out) {
+ out.data = in->data;
+ }
+
+ //TODO remove this
+ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out,
+ const RosToRtmLink<RTC::TimedLong>& link) {
+ std::cout << "[";
+ std::cout << link.name.c_str();
+ std::cout << "] : [";
+ std::cout << boost::lexical_cast<std::string>(in->data).c_str();
+ std::cout << "]->[";
+ std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
+ std::cout << std::endl;
+ }
+ */
+void test(const char* c, RTC::OutPortBase* o) {
+	std::cout << "blah" << std::endl;
 }
 
-//TODO remove this
-void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out,
-		const RosToRtmLink<RTC::TimedLong>& link) {
-	std::cout << "[";
-	std::cout << link.name.c_str();
-	std::cout << "] : [";
-	std::cout << boost::lexical_cast<std::string>(in->data).c_str();
-	std::cout << "]->[";
-	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
-	std::cout << std::endl;
-}
-*/
 namespace GatewayFactory {
 
 	class Config {
 	public:
-        Config(const char** gateway_spec) :
-                         hybrid_spec(gateway_spec) {
-         }
+		Config(const char** gateway_spec) :
+				hybrid_spec(gateway_spec) {
+			//registerRtcOutPortFn = &test;
+		}
 
-         const char** hybrid_spec;
+		const char** hybrid_spec;
 
 	public:
 		std::vector<boost::function0<void> > rosSubscriberFnList;
@@ -128,9 +133,8 @@ namespace GatewayFactory {
 		/*!
 		 * A function to be called to add out port to the RTC.
 		 */
-		boost::function2<void, const char*, RTC::OutPortBase*> registerRtcOutPortFn;
-
-		std::vector<boost::function0<void> > registerRtcOutPortSimpleFnList;
+		boost::function2<bool, const char*, RTC::OutPortBase&> registerRtcOutPortFn;
+		std::vector<boost::function1<void, boost::function2<bool, const char*, RTC::OutPortBase&> > > registerRtcOutPortSimpleFnList;
 
 		/*!
 		 * A function to be called to add in port to the RTC.
@@ -161,12 +165,23 @@ namespace GatewayFactory {
 
 			RosToRtmLink<RtmType>* link = new RosToRtmLink<RtmType>(name);
 
-			boost::function0<void> fn = boost::bind(registerRtcOutPortFn, name.c_str(), &link->rtcOutPort);
+			//boost::function1<void, boost::function2<void, const char*, RTC::OutPortBase&> > fn = boost::bind(
+			//&Config::addOutPortWrapper, this, name.c_str(), &link->rtcOutPort);
+			//registerRtcOutPortSimpleFnList.push_back(fn);
+
+			boost::function1<void, boost::function2<bool, const char*, RTC::OutPortBase&> > fn =
+					boost::bind(&Config::addOutPortWrapper, this, _1, name.c_str(), &link->rtcOutPort);
+
 			registerRtcOutPortSimpleFnList.push_back(fn);
 
 			boost::function0<void> rosSubscriberFn;
 			rosSubscriberFn = boost::bind(&Config::subscribeToRosTopic<RosType, RtmType>, this, link, converter);
 			rosSubscriberFnList.push_back(rosSubscriberFn);
+		}
+
+		void addOutPortWrapper(boost::function2<bool, const char*, RTC::OutPortBase&> fn, const char* name,
+				RTC::OutPortBase* outport) {
+			fn(name, *outport);
 		}
 
 		/*!
@@ -272,16 +287,12 @@ namespace GatewayFactory {
 			outPort->write();
 		}
 
-		void addOutPortWrapper(boost::function2<bool, const char*, RTC::OutPortBase&> fn, const char* name,
-				RTC::OutPortBase* outport) {
-			fn(name, *outport);
-		}
-
 	public:
 
 		void setRegisterRtcOutPortFn(boost::function2<bool, const char*, RTC::OutPortBase&> fn) {
 			boost::function2<void, const char*, RTC::OutPortBase*> func;
-			registerRtcOutPortFn = boost::bind(&Config::addOutPortWrapper, this, fn, _1, _2);
+			//registerRtcOutPortFn = boost::bind(&Config::addOutPortWrapper, this, fn, _1, _2);
+			registerRtcOutPortFn = fn;
 		}
 
 		void setRegisterRtcInPortFn(boost::function2<bool, const char*, RTC::InPortBase&> fn) {
@@ -290,7 +301,7 @@ namespace GatewayFactory {
 
 		void doRegisterRtcOutPort() {
 			for (int i = 0; i < registerRtcOutPortSimpleFnList.size(); ++i) {
-				registerRtcOutPortSimpleFnList[i]();
+				registerRtcOutPortSimpleFnList[i](registerRtcOutPortFn);
 			}
 		}
 
@@ -324,74 +335,64 @@ namespace GatewayFactory {
 			}
 		}
 	};
-
 /*
-	static const char* temp_gateway_spec[] = { //
-			//
-					"implementation_id", "Hybrid", //
-					"type_name", "Hybrid", //
-					"description", "A hybrid ROS RTC module", //
-					"version", "1.0.0", //
-					"vendor", "Gabor Juhasz", //
-					"category", "Category", //
-					"activity_type", //
-					"PERIODIC", //
-					"kind", "DataFlowComponent", //
-					"max_instance", "1", //
-					"language", "C++", //
-					"lang_type", "compile", //
-					"" };
 
-	template<class _New>
-	RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
-		GatewayFactory::Config* config;
-		config = new GatewayFactory::Config(temp_gateway_spec);
-		return new _New(manager, &config);
-	}
+ static const char* temp_gateway_spec[] = { //
+ //
+ "implementation_id", "Hybrid", //
+ "type_name", "Hybrid", //
+ "description", "A hybrid ROS RTC module", //
+ "version", "1.0.0", //
+ "vendor", "Gabor Juhasz", //
+ "category", "Category", //
+ "activity_type", //
+ "PERIODIC", //
+ "kind", "DataFlowComponent", //
+ "max_instance", "1", //
+ "language", "C++", //
+ "lang_type", "compile", //
+ "" };
 
-	template<class Component>
-	void GatewayInit(RTC::Manager* manager, Config* config) {
 
-		coil::Properties profile(config->hybrid_spec);
+ template<class Component>
+ void GatewayInit(RTC::Manager* manager) {
 
-		//boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&Create<Component>, _1, config);
-		//RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
+ coil::Properties profile(temp_gateway_spec);
 
-		manager->registerFactory(profile, RTC::Create<Component>, RTC::Delete<Component>);
-	}
+ //boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&Create<Component>, _1, config);
+ //RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
 
-	template<class Component>
-	void ModuleInit(RTC::Manager* manager, Config* config) {
-		std::cout << "Starting Gateway" << std::endl;
-		GatewayInit<Component>(manager, config);
+ manager->registerFactory(profile, RTC::Create<Component>, RTC::Delete<Component>);
+ }
 
-		RTC::RtcBase* comp;
-		comp = manager->createComponent("Gateway");
+ template<class Component>
+ void ModuleInit(RTC::Manager* manager) {
+ std::cout << "Starting Gateway" << std::endl;
+ GatewayInit<Component>(manager);
 
-		if (comp == NULL) {
-			std::cerr << "Component create failed." << std::endl;
-			abort();
-		}
+ RTC::RtcBase* comp;
+ comp = manager->createComponent("Gateway");
 
-		return;
-	}
+ if (comp == NULL) {
+ std::cerr << "Component create failed." << std::endl;
+ abort();
+ }
 
-	template<class Component>
-	void createNewGateway(int argc, char** argv, Config* config, bool block = true) {
-		RTC::Manager* manager;
-		manager = RTC::Manager::init(argc, argv);
-		manager->init(argc, argv);
+ return;
+ }
 
-		boost::function1<void, RTC::Manager*> mFn = boost::bind(&ModuleInit<Component>, _1, config);
-		std::cout << "BLAH" << std::endl;
-		RTC::ModuleInitProc* moduleInitProc = mFn.target<RTC::ModuleInitProc>();
-		std::cout << "BLAH" << std::endl;
-		manager->setModuleInitProc(**moduleInitProc);
-		std::cout << "BLAH" << std::endl;
-		manager->activateManager();
-		std::cout << "BLAH" << std::endl;
-		manager->runManager(!block);
-	}
+ template<class Component>
+ void createNewGateway(int argc, char** argv, bool block = true) {
+ RTC::Manager* manager;
+ manager = RTC::Manager::init(argc, argv);
+ manager->init(argc, argv);
+
+ //boost::function1<void, RTC::Manager*> mFn = boost::bind(&ModuleInit<Component>, _1, config);
+ //RTC::ModuleInitProc* moduleInitProc = mFn.target<RTC::ModuleInitProc>();
+ manager->setModuleInitProc(ModuleInit<Component>);
+ manager->activateManager();
+ manager->runManager(!block);
+ }
 */
 }
 
