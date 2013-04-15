@@ -410,42 +410,59 @@ namespace GatewayFactory {
 					"lang_type", "compile", //
 					"" };
 
-	template<class _New>
-	RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
-		std::cout << "creating" << std::endl;
-		return new _New(manager);
-	}
+	/*
+	 Config* config;
+	 template<class _New>
+	 RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
+	 std::cout << "creating" << std::endl;
+	 return new _New(manager);
+	 }
+	 /*	/*
+	 template<class Component>
+	 void HybridInit(RTC::Manager* manager) {
+	 coil::Properties profile(gateway_spec);
+	 manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
+	 }
 
+	 template<class Component>
+	 void MyModuleInit(RTC::Manager* manager) {
+	 std::cout << "Starting Hybrid" << std::endl;
+
+	 HybridInit<Component>(manager);
+	 RTC::RtcBase* comp;
+
+	 comp = manager->createComponent("Hybrid");
+
+	 if (comp == NULL) {
+	 std::cerr << "Component create failed." << std::endl;
+	 abort();
+	 }
+
+	 return;
+	 }
+	 */
 	template<class Component>
-	void HybridInit(RTC::Manager* manager) {
+	void createNewGateway(int argc, char** argv, Config config, bool block = true) {
+
 		coil::Properties profile(gateway_spec);
-		manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
-	}
 
-	template<class Component>
-	void MyModuleInit(RTC::Manager* manager) {
-		std::cout << "Starting Hybrid" << std::endl;
-
-		HybridInit<Component>(manager);
+		RTC::Manager* manager;
 		RTC::RtcBase* comp;
 
-		comp = manager->createComponent("Hybrid");
+		manager = RTC::Manager::init(argc, argv);
+		manager->init(argc, argv);
+		manager->registerFactory(profile, RTC::Create<Component>, RTC::Delete<Component>);
+		manager->activateManager();
 
+		comp = manager->createComponent("Hybrid");
 		if (comp == NULL) {
 			std::cerr << "Component create failed." << std::endl;
 			abort();
 		}
+		Component* gw = (Component*) comp;
+		gw->setConfig(&config);
+		gw->setUpPorts();
 
-		return;
-	}
-	template<class Component>
-	void createNewGateway(int argc, char** argv, bool block = true) {
-		RTC::Manager* manager;
-		manager = RTC::Manager::init(argc, argv);
-		manager->init(argc, argv);
-
-		manager->setModuleInitProc(MyModuleInit<Component>);
-		manager->activateManager();
 		manager->runManager(!block);
 	}
 }

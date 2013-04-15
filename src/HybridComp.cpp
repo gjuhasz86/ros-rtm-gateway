@@ -12,23 +12,23 @@
 #include <string>
 #include <stdlib.h>
 #include "Gateway.h"
-/*
- static const char* gateway_spec[] = { //
- //
- "implementation_id", "Hybrid", //
- "type_name", "Hybrid", //
- "description", "A hybrid ROS RTC module", //
- "version", "1.0.0", //
- "vendor", "Gabor Juhasz", //
- "category", "Category", //
- "activity_type", //
- "PERIODIC", //
- "kind", "DataFlowComponent", //
- "max_instance", "1", //
- "language", "C++", //
- "lang_type", "compile", //
- "" };
- */
+
+static const char* gateway_spec[] = { //
+		//
+				"implementation_id", "Hybrid", //
+				"type_name", "Hybrid", //
+				"description", "A hybrid ROS RTC module", //
+				"version", "1.0.0", //
+				"vendor", "Gabor Juhasz", //
+				"category", "Category", //
+				"activity_type", //
+				"PERIODIC", //
+				"kind", "DataFlowComponent", //
+				"max_instance", "1", //
+				"language", "C++", //
+				"lang_type", "compile", //
+				"" };
+
 void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out) {
 	out.data = in->data;
 }
@@ -50,30 +50,30 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
 	std::cout << std::endl;
 }
+/*
+ class MyGateway: public Gateway {
+ public:
+ MyGateway(RTC::Manager* manager) :
+ Gateway(manager) {
+ }
 
-class MyGateway: public Gateway {
-public:
-	MyGateway(RTC::Manager* manager) :
-			Gateway(manager) {
-	}
-
-	virtual void setUpPorts() {
-		RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
-		config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
-	}
-};
-
+ virtual void setUpPorts() {
+ RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+ config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+ }
+ };
+ */
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
-	//config2 = new GatewayFactory::Config(gateway_spec);
+	GatewayFactory::Config config(gateway_spec);
 
-	//RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
-	//config2->addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
+	RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+	config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
-	//GatewayFactory::createNewGateway<Gateway>(argc, argv, true);
-	GatewayFactory::createNewGateway<MyGateway>(argc, argv, true);
+	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
+	//GatewayFactory::createNewGateway<MyGateway>(argc, argv, true);
 
 	return 0;
 }

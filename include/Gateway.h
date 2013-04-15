@@ -64,6 +64,9 @@ public:
 	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
 
 	virtual void setUpPorts();
+	virtual void setConfig(GatewayFactory::Config* c){
+		config=*c;
+	}
 };
 
 
@@ -94,14 +97,20 @@ Gateway::~Gateway() {
 
 
 void Gateway::setUpPorts(){
-
-}
-
-RTC::ReturnCode_t Gateway::onInitialize() {
 	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
 	config.setRegisterRtcOutPortFn(addOutPortFn);
-	setUpPorts();
 	config.doRegisterRtcOutPort();
+}
+/*
+void setConfig(GatewayFactory::Config* c){
+	config=*c;
+}
+*/
+RTC::ReturnCode_t Gateway::onInitialize() {
+	//boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
+	//config.setRegisterRtcOutPortFn(addOutPortFn);
+	//setUpPorts();
+	//config.doRegisterRtcOutPort();
 	return RTC::RTC_OK;
 }
 
