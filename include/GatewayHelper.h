@@ -82,24 +82,8 @@ public:
 	bool const hasCallback;
 	boost::function3<void, const boost::shared_ptr<RosType const>&, RtmType&, RosToRtmLink<RtmType>&> callback;
 };
-/*
- //TODO remove this
- void convert1(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out) {
- out.data = in->data;
- }
 
- //TODO remove this
- void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, RTC::TimedLong& out,
- const RosToRtmLink<RTC::TimedLong>& link) {
- std::cout << "[";
- std::cout << link.name.c_str();
- std::cout << "] : [";
- std::cout << boost::lexical_cast<std::string>(in->data).c_str();
- std::cout << "]->[";
- std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
- std::cout << std::endl;
- }
- */
+
 void test(const char* c, RTC::OutPortBase* o) {
 	std::cout << "blah" << std::endl;
 }
@@ -108,12 +92,12 @@ namespace GatewayFactory {
 
 	class Config {
 	public:
-		Config(const char** gateway_spec) :
-				hybrid_spec(gateway_spec) {
+		Config(const char** spec) :
+				comp_spec(spec) {
 			//registerRtcOutPortFn = &test;
 		}
 
-		const char** hybrid_spec;
+		const char** comp_spec;
 
 	public:
 		std::vector<boost::function0<void> > rosSubscriberFnList;
@@ -290,8 +274,6 @@ namespace GatewayFactory {
 	public:
 
 		void setRegisterRtcOutPortFn(boost::function2<bool, const char*, RTC::OutPortBase&> fn) {
-			boost::function2<void, const char*, RTC::OutPortBase*> func;
-			//registerRtcOutPortFn = boost::bind(&Config::addOutPortWrapper, this, fn, _1, _2);
 			registerRtcOutPortFn = fn;
 		}
 
@@ -335,116 +317,11 @@ namespace GatewayFactory {
 			}
 		}
 	};
-	/*
 
-	 static const char* temp_gateway_spec[] = { //
-	 //
-	 "implementation_id", "Hybrid", //
-	 "type_name", "Hybrid", //
-	 "description", "A hybrid ROS RTC module", //
-	 "version", "1.0.0", //
-	 "vendor", "Gabor Juhasz", //
-	 "category", "Category", //
-	 "activity_type", //
-	 "PERIODIC", //
-	 "kind", "DataFlowComponent", //
-	 "max_instance", "1", //
-	 "language", "C++", //
-	 "lang_type", "compile", //
-	 "" };
-
-
-	 template<class Component>
-	 void GatewayInit(RTC::Manager* manager) {
-
-	 coil::Properties profile(temp_gateway_spec);
-
-	 //boost::function1<RTC::RTObject_impl*, RTC::Manager*> bNewFn = boost::bind(&Create<Component>, _1, config);
-	 //RTC::RtcNewFunc* newFn = bNewFn.target<RTC::RtcNewFunc>();
-
-	 manager->registerFactory(profile, RTC::Create<Component>, RTC::Delete<Component>);
-	 }
-
-	 template<class Component>
-	 void ModuleInit(RTC::Manager* manager) {
-	 std::cout << "Starting Gateway" << std::endl;
-	 GatewayInit<Component>(manager);
-
-	 RTC::RtcBase* comp;
-	 comp = manager->createComponent("Gateway");
-
-	 if (comp == NULL) {
-	 std::cerr << "Component create failed." << std::endl;
-	 abort();
-	 }
-
-	 return;
-	 }
-
-	 template<class Component>
-	 void createNewGateway(int argc, char** argv, bool block = true) {
-	 RTC::Manager* manager;
-	 manager = RTC::Manager::init(argc, argv);
-	 manager->init(argc, argv);
-
-	 //boost::function1<void, RTC::Manager*> mFn = boost::bind(&ModuleInit<Component>, _1, config);
-	 //RTC::ModuleInitProc* moduleInitProc = mFn.target<RTC::ModuleInitProc>();
-	 manager->setModuleInitProc(ModuleInit<Component>);
-	 manager->activateManager();
-	 manager->runManager(!block);
-	 }
-	 */
-	static const char* gateway_spec[] = { //
-			//
-					"implementation_id", "Hybrid", //
-					"type_name", "Hybrid", //
-					"description", "A hybrid ROS RTC module", //
-					"version", "1.0.0", //
-					"vendor", "Gabor Juhasz", //
-					"category", "Category", //
-					"activity_type", //
-					"PERIODIC", //
-					"kind", "DataFlowComponent", //
-					"max_instance", "1", //
-					"language", "C++", //
-					"lang_type", "compile", //
-					"" };
-
-	/*
-	 Config* config;
-	 template<class _New>
-	 RTC::RTObject_impl* CreateGateway(RTC::Manager* manager) {
-	 std::cout << "creating" << std::endl;
-	 return new _New(manager);
-	 }
-	 /*	/*
-	 template<class Component>
-	 void HybridInit(RTC::Manager* manager) {
-	 coil::Properties profile(gateway_spec);
-	 manager->registerFactory(profile, CreateGateway<Component>, RTC::Delete<Component>);
-	 }
-
-	 template<class Component>
-	 void MyModuleInit(RTC::Manager* manager) {
-	 std::cout << "Starting Hybrid" << std::endl;
-
-	 HybridInit<Component>(manager);
-	 RTC::RtcBase* comp;
-
-	 comp = manager->createComponent("Hybrid");
-
-	 if (comp == NULL) {
-	 std::cerr << "Component create failed." << std::endl;
-	 abort();
-	 }
-
-	 return;
-	 }
-	 */
 	template<class Component>
 	void createNewGateway(int argc, char** argv, Config config, bool block = true) {
 
-		coil::Properties profile(gateway_spec);
+		coil::Properties profile(config.comp_spec);
 
 		RTC::Manager* manager;
 		RTC::RtcBase* comp;
@@ -459,7 +336,8 @@ namespace GatewayFactory {
 			std::cerr << "Component create failed." << std::endl;
 			abort();
 		}
-		Component* gw = (Component*) comp;
+
+		Component* gw = (Component*) comp; // TODO rewrite cast
 		gw->setConfig(&config);
 		gw->setUpPorts();
 

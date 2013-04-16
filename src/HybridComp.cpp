@@ -50,19 +50,8 @@ void callback(const boost::shared_ptr<std_msgs::Int32 const>& in, TimedLong& out
 	std::cout << boost::lexical_cast<std::string>(out.data).c_str() << "]";
 	std::cout << std::endl;
 }
-/*
- class MyGateway: public Gateway {
- public:
- MyGateway(RTC::Manager* manager) :
- Gateway(manager) {
- }
 
- virtual void setUpPorts() {
- RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
- config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
- }
- };
- */
+
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
 	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
@@ -73,7 +62,6 @@ int main(int argc, char** argv) {
 	config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
 	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
-	//GatewayFactory::createNewGateway<MyGateway>(argc, argv, true);
 
 	return 0;
 }
