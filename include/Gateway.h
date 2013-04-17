@@ -29,28 +29,10 @@
 
 using namespace RTC;
 
-
-static const char* tmp_spec[] = { //
-		//
-				"implementation_id", "Hybrid", //
-				"type_name", "Hybrid", //
-				"description", "A hybrid ROS RTC module", //
-				"version", "1.0.0", //
-				"vendor", "Gabor Juhasz", //
-				"category", "Category", //
-				"activity_type", //
-				"PERIODIC", //
-				"kind", "DataFlowComponent", //
-				"max_instance", "1", //
-				"language", "C++", //
-				"lang_type", "compile", //
-				"" };
-
 class Gateway: public RTC::DataFlowComponentBase {
 protected:
 
 	GatewayFactory::Config config;
-
 
 public:
 	Gateway(RTC::Manager* manager);
@@ -64,29 +46,22 @@ public:
 	virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
 
 	virtual void setUpPorts();
-	virtual void setConfig(GatewayFactory::Config* c){
-		config=*c;
+	virtual void setConfig(GatewayFactory::Config* c) {
+		config = *c;
 	}
 };
 
-
 /*
-extern "C" {
-	DLL_EXPORT void HybridInit(RTC::Manager* manager);
-}
-;
-*/
+ extern "C" {
+ DLL_EXPORT void HybridInit(RTC::Manager* manager);
+ }
+ ;
+ */
 
 ////////////////////////////////////////////////////////////////////////
 // IMPLEMENTATION
-
 Gateway::Gateway(RTC::Manager* manager) :
-                RTC::DataFlowComponentBase(manager), config(*(new GatewayFactory::Config(tmp_spec))){
-	std::cout << "this sucks" << std::endl;
-}
-
-Gateway::Gateway(RTC::Manager* manager, GatewayFactory::Config* c) :
-                RTC::DataFlowComponentBase(manager), config(*c){
+		RTC::DataFlowComponentBase(manager), config() { // creating an empty config, will be thrown away
 }
 
 Gateway::~Gateway() {
@@ -95,22 +70,17 @@ Gateway::~Gateway() {
 ////////////////////////////////////////////////////////////////////////////////
 // Public methods - methods comes with the RT component
 
-
-void Gateway::setUpPorts(){
-	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
+void Gateway::setUpPorts() {
+	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2); // todo: pull this into Config
 	config.setRegisterRtcOutPortFn(addOutPortFn);
 	config.doRegisterRtcOutPort();
 }
 /*
-void setConfig(GatewayFactory::Config* c){
-	config=*c;
-}
-*/
+ void setConfig(GatewayFactory::Config* c){
+ config=*c;
+ }
+ */
 RTC::ReturnCode_t Gateway::onInitialize() {
-	//boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2);
-	//config.setRegisterRtcOutPortFn(addOutPortFn);
-	//setUpPorts();
-	//config.doRegisterRtcOutPort();
 	return RTC::RTC_OK;
 }
 
@@ -127,8 +97,8 @@ RTC::ReturnCode_t Gateway::onDeactivated(RTC::UniqueId ec_id) {
 }
 
 RTC::ReturnCode_t Gateway::onExecute(RTC::UniqueId ec_id) {
-	ros::spinOnce();
-	config.onExec();
+	ros::spinOnce(); // todo: pull into Config
+	config.checkRtcInPort();
 	return RTC::RTC_OK;
 }
 

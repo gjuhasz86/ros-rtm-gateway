@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
 	GatewayFactory::Config config(gateway_spec);
 
-	RosToRtmConverter<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
+	RosToRtmHandler<std_msgs::Int32, TimedLong> c1(&convert1, &callback);
 	config.addNewRosToRtmLink<std_msgs::Int32, TimedLong>("chatterInt1", c1);
 
 	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
