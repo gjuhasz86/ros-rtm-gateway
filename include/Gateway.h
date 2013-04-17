@@ -74,6 +74,10 @@ void Gateway::setUpPorts() {
 	boost::function2<bool, const char*, OutPortBase&> addOutPortFn = boost::bind(&Gateway::addOutPort, this, _1, _2); // todo: pull this into Config
 	config.setRegisterRtcOutPortFn(addOutPortFn);
 	config.doRegisterRtcOutPort();
+
+	boost::function2<bool, const char*, InPortBase&> addInPortFn = boost::bind(&Gateway::addInPort, this, _1, _2); // todo: pull this into Config
+	config.setRegisterRtcInPortFn(addInPortFn);
+	config.doRegisterRtcInPort();
 }
 /*
  void setConfig(GatewayFactory::Config* c){

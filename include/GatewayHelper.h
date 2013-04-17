@@ -86,19 +86,19 @@ public:
 template<class RtmType, class RosType>
 struct RtmToRosHandler {
 public:
-	RtmToRosHandler(boost::function2<void, RtmType&, const boost::shared_ptr<RosType const>&> convert,
-			boost::function3<void, RtmType&, const boost::shared_ptr<RosType const>&, RosToRtmLink<RtmType>&> const callback) :
+	RtmToRosHandler(boost::function2<void, RtmType&, RosType&> convert,
+			boost::function3<void, RtmType&, RosType&, RtmToRosLink<RtmType>&> const callback) :
 			convert(convert), callback(callback), hasCallback(true) {
 	}
 
-	RtmToRosHandler(boost::function2<void, RtmType&, const boost::shared_ptr<RosType const>&> convert) :
+	RtmToRosHandler(boost::function2<void, RtmType&, RosType&> convert) :
 			convert(convert), hasCallback(false) {
 	}
 
-	boost::function2<void, RtmType&, const boost::shared_ptr<RosType const>&> convert;
+	boost::function2<void, RtmType&, RosType&> convert;
 
 	bool const hasCallback;
-	boost::function3<void, RtmType&, const boost::shared_ptr<RosType const>&, RosToRtmLink<RtmType>&> callback;
+	boost::function3<void, RtmType&, RosType&, RtmToRosLink<RtmType>&> callback;
 };
 
 namespace GatewayFactory {
@@ -117,6 +117,8 @@ namespace GatewayFactory {
 	private:
 		typedef boost::function2<bool, const char*, RTC::OutPortBase&> RegisterRtcOutPortFn;
 		typedef boost::function1<void, RegisterRtcOutPortFn> RegisterRtcOutPortFnWrapper;
+		typedef boost::function2<bool, const char*, RTC::InPortBase&> RegisterRtcInPortFn;
+		typedef boost::function1<void, RegisterRtcInPortFn> RegisterRtcInPortFnWrapper;
 
 		typedef boost::function0<void> RosSubscriberFn;
 		typedef boost::function0<void> RosAdvertiserFn;
@@ -145,7 +147,8 @@ namespace GatewayFactory {
 		/*!
 		 * A function to be called to add in port to the RTC.
 		 */
-		boost::function2<bool, const char*, RTC::InPortBase&> registerRtcInPortFn;
+		RegisterRtcInPortFn registerRtcInPortFn;
+		std::vector<RegisterRtcInPortFnWrapper> registerRtcInPortFnWrapperList;
 
 	public:
 
@@ -160,6 +163,12 @@ namespace GatewayFactory {
 		void doRegisterRtcOutPort() {
 			for (int i = 0; i < registerRtcOutPortFnWrapperList.size(); ++i) {
 				registerRtcOutPortFnWrapperList[i](registerRtcOutPortFn);
+			}
+		}
+
+		void doRegisterRtcInPort() {
+			for (int i = 0; i < registerRtcInPortFnWrapperList.size(); ++i) {
+				registerRtcInPortFnWrapperList[i](registerRtcInPortFn);
 			}
 		}
 
@@ -215,8 +224,7 @@ namespace GatewayFactory {
 			rosSubscriberFnList.push_back(rosSubscriberFn);
 		}
 
-		void addOutPortWrapper(boost::function2<bool, const char*, RTC::OutPortBase&> fn, const char* name,
-				RTC::OutPortBase* outport) {
+		void addOutPortWrapper(RegisterRtcOutPortFn fn, const char* name, RTC::OutPortBase* outport) {
 			fn(name, *outport);
 		}
 
@@ -263,13 +271,16 @@ namespace GatewayFactory {
 		 * Note: RtmType has to have a parameterless constructor.
 		 */
 		template<class RtmType, class RosType>
-		void addNewRtmToRosLink(const std::string& name,
-				boost::function2<void, const RtmType&, RosType&> convertFn) {
+		void addNewRtmToRosLink(const std::string& name, RtmToRosHandler<RtmType, RosType>& handler) {
 
 			RtmToRosLink<RtmType>* link = new RtmToRosLink<RtmType>(name);
 
+			RegisterRtcInPortFnWrapper regRtcInPortFnWrap;
+			regRtcInPortFnWrap = boost::bind(&Config::addInPortWrapper, this, _1, name.c_str(), &link->rtcInPort);
+			registerRtcInPortFnWrapperList.push_back(regRtcInPortFnWrap);
+
 			CopyFromRtcToRosFn copyFromRtcToRosFn = boost::bind(&Config::copyFromRtcToRos<RtmType, RosType>, this, link,
-					convertFn);
+					handler);
 			copyFromRtcToRosFnList.push_back(copyFromRtcToRosFn);
 
 			boost::function0<void> rosAdvertiserFn;
@@ -277,19 +288,28 @@ namespace GatewayFactory {
 			rosAdvertiserFnList.push_back(rosAdvertiserFn);
 		}
 
+		void addInPortWrapper(RegisterRtcInPortFn fn, const char* name, RTC::InPortBase* inport) {
+			fn(name, *inport);
+		}
+
 		/*!
 		 * This member function is a callback function for the RTC port. It is called periodically, and passed the
 		 * Link object containing an RTC port, and a ROS publisher.
 		 */
 		template<class RtmType, class RosType>
-		void copyFromRtcToRos(RtmToRosLink<RtmType>* link, boost::function2<void, const RtmType&, RosType&> convertFn) {
+		void copyFromRtcToRos(RtmToRosLink<RtmType>* link, RtmToRosHandler<RtmType, RosType>& handler) {
 
 			RTC::InPort<RtmType>* inPort = &link->rtcInPort;
 			bool hasResult = readFromRtcPort<RtmType>(inPort);
 			if (hasResult) {
-				RosType msg;
-				convertFn(link->rtcInPortBuffer, msg);
-				link->rosPublisher.publish(msg);
+				RosType msgOut;
+				handler.convert(link->rtcInPortBuffer, msgOut);
+
+				if (handler.hasCallback) {
+					handler.callback(link->rtcInPortBuffer, msgOut, *link);
+				}
+
+				link->rosPublisher.publish(msgOut);
 			}
 
 		}
