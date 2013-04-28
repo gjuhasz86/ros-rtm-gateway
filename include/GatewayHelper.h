@@ -15,6 +15,7 @@
 #include "ros/ros.h"
 
 //TODO remove these headers
+/*
 #include "std_msgs/Int32.h"
 #include "BasicDataTypeStub.h"
 #include <rtm/Manager.h>
@@ -42,6 +43,7 @@
 #include "std_msgs/String.h"
 
 #include "GatewayHelper.h"
+*/
 
 template<class RtmType>
 struct RtmToRosLink {
@@ -105,7 +107,8 @@ namespace GatewayFactory {
 
 	class Config {
 	public:
-		Config() {
+		Config() :
+				comp_spec(0) {
 		}
 
 		Config(const char** spec) :

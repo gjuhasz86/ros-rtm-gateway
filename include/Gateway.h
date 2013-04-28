@@ -1,6 +1,6 @@
 #ifndef GATEWAY_H
 #define GATEWAY_H
-
+/*
 #include <rtm/Manager.h>
 #include <rtm/DataFlowComponentBase.h>
 #include <rtm/CorbaPort.h>
@@ -24,7 +24,7 @@
 #include "ros/ros.h"
 #include "std_msgs/Int32.h"
 #include "std_msgs/String.h"
-
+*/
 #include "GatewayHelper.h"
 
 using namespace RTC;

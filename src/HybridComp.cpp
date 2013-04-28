@@ -13,6 +13,33 @@
 #include <stdlib.h>
 #include "Gateway.h"
 
+#include "std_msgs/Int32.h"
+#include "BasicDataTypeStub.h"
+#include <rtm/Manager.h>
+#include <rtm/DataFlowComponentBase.h>
+#include <rtm/CorbaPort.h>
+#include <rtm/DataInPort.h>
+#include <rtm/DataOutPort.h>
+#include <rtm/idl/BasicDataTypeSkel.h>
+#include <rtm/idl/ExtendedDataTypesSkel.h>
+#include <rtm/idl/InterfaceDataTypesSkel.h>
+
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+#include <boost/any.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <cstring>
+#include <vector>
+#include <string>
+#include <iostream>
+
+#include "BasicDataTypeStub.h"
+#include "ros/ros.h"
+#include "std_msgs/Int32.h"
+#include "std_msgs/String.h"
+
+
 static const char* gateway_spec[] = { //
 		//
 				"implementation_id", "Hybrid", //

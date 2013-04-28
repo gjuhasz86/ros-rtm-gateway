@@ -34,6 +34,9 @@ add_dependencies(listener ros_rtm_gateway_gencpp)
 add_executable(HybridComp src/HybridComp.cpp)
 target_link_libraries(HybridComp ${catkin_LIBRARIES} RTC coil uuid dl pthread omniORB4 omnithread omniDynamic4)
 
+add_executable(GatewayComp1 src/GatewayComp1.cpp)
+target_link_libraries(GatewayComp1 ${catkin_LIBRARIES} RTC coil uuid dl pthread omniORB4 omnithread omniDynamic4)
+
 add_executable(MultiComp src/MultiComp.cpp)
 target_link_libraries(MultiComp ${catkin_LIBRARIES} ros_rtm_gateway_coutlong ros_rtm_gateway_coutstring RTC coil uuid dl pthread omniORB4 omnithread omniDynamic4)
 
