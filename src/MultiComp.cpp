@@ -5,7 +5,7 @@
 #include "Gateway.h"
 #include "CoutLong.h"
 #include "CoutString.h"
-/*
+
 static const char* hybrid_spec[] = { //
 		//
 				"implementation_id", "Hybrid", //
@@ -77,8 +77,11 @@ void createComp(int argc, char** argv,RTC::ModuleInitProc proc, bool block){
 	manager = RTC::Manager::init(argc, argv);
 	manager->init(argc, argv);
 	manager->setModuleInitProc(proc);
+	std::cout << "1" << std::endl;
 	manager->activateManager();
+	std::cout << "2" << std::endl;
 	manager->runManager(!block);
+	std::cout << "3" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -91,7 +94,4 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-*/
-int main(int argc, char** argv) {
-	return 0;
-}
+
