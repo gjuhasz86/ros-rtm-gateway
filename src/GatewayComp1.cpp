@@ -72,7 +72,7 @@ void callback1(const boost::shared_ptr<sensor_msgs::Imu const>& in, Velocity3D& 
 */
 
 void callback2(const boost::shared_ptr<sensor_msgs::Imu const>& in, Velocity3D& out,
-		const RosToRtmLink<Velocity3D>& link) {
+		const GatewayFactory::RosToRtmLink<Velocity3D>& link) {
 
 	std::cout << in->orientation.x << std::endl;
 	std::cout << in->orientation.y << std::endl;
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 
 	GatewayFactory::Config config(gateway_spec);
 
-	RosToRtmHandler<sensor_msgs::Imu, Velocity3D> handler1(&convert1, &callback2);
+	GatewayFactory::RosToRtmHandler<sensor_msgs::Imu, Velocity3D> handler1(&convert1, &callback2);
 	config.addNewRosToRtmLink<sensor_msgs::Imu, Velocity3D>("/android/imu", handler1);
 
 	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
