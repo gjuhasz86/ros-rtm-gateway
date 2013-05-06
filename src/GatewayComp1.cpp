@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 	GatewayFactory::RosToRtmHandler<sensor_msgs::Imu, Velocity3D> handler1(&convert1, &callback2);
 	config.addNewRosToRtmLink<sensor_msgs::Imu, Velocity3D>("/android/imu", handler1);
 
-	GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
+	GatewayFactory::createNewGateway<Gateway>(argc, argv, "Hybrid", config, true);
 
 	return 0;
 }

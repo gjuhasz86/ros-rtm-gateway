@@ -99,7 +99,7 @@ RTC::ReturnCode_t Gateway::onDeactivated(RTC::UniqueId ec_id) {
 }
 
 RTC::ReturnCode_t Gateway::onExecute(RTC::UniqueId ec_id) {
-  ros::spinOnce(); // todo: pull into Config
+  config.checkRosInput();
   config.checkRtcInPort();
   return RTC::RTC_OK;
 }

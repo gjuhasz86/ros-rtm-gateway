@@ -111,7 +111,8 @@ int main(int argc, char** argv) {
   config.addNewRtmToRosLink<TimedLong, std_msgs::Int32>("rtm_to_ros",
       handler2);
 
-  GatewayFactory::createNewGateway<Gateway>(argc, argv, config, true);
+  GatewayFactory::createNewGateway<Gateway>(argc, argv, "Hybrid",
+      config, true);
 
   return 0;
 }

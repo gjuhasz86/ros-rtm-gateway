@@ -182,6 +182,10 @@ public:
     }
   }
 
+  void checkRosInput() {
+    ros::spinOnce();
+  }
+
 public:
 
   /*!
@@ -334,8 +338,8 @@ public:
 };
 
 template<class Component>
-void createNewGateway(int argc, char** argv, Config config,
-    bool block = true) {
+void createNewGateway(int argc, char** argv, std::string name,
+    Config config, bool block = true) {
 
   coil::Properties profile(config.comp_spec);
 
@@ -343,12 +347,11 @@ void createNewGateway(int argc, char** argv, Config config,
   RTC::RtcBase* comp;
 
   manager = RTC::Manager::init(argc, argv);
-  manager->init(argc, argv);
   manager->registerFactory(profile, RTC::Create<Component>,
       RTC::Delete<Component>);
   manager->activateManager();
 
-  comp = manager->createComponent("Hybrid");
+  comp = manager->createComponent(name.c_str());
   if (comp == NULL) {
     std::cerr << "Component create failed." << std::endl;
     abort();
