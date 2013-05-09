@@ -26,7 +26,7 @@
 #include "std_msgs/Int32.h"
 #include "sensor_msgs/Imu.h"
 
-
+using namespace RTC;
 
 static const char* gateway_spec[] = { //
 		//

@@ -39,6 +39,8 @@
 #include "std_msgs/Int32.h"
 #include "std_msgs/String.h"
 
+using namespace RTC;
+
 static const char* gateway_spec[] = { //
     //
         "implementation_id", "Hybrid", //
