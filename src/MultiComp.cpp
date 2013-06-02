@@ -2,16 +2,37 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
-#include "Hybrid.h"
+#include "Gateway.h"
 #include "CoutLong.h"
 #include "CoutString.h"
 
+static const char* hybrid_spec[] = { //
+		//
+				"implementation_id", "Hybrid", //
+				"type_name", "Hybrid", //
+				"description", "A hybrid ROS RTC module", //
+				"version", "1.0.0", //
+				"vendor", "Gabor Juhasz", //
+				"category", "Category", //
+				"activity_type", //
+				"PERIODIC", //
+				"kind", "DataFlowComponent", //
+				"max_instance", "1", //
+				"language", "C++", //
+				"lang_type", "compile", //
+				"" };
+
+void HybridInit(RTC::Manager* manager) {
+	coil::Properties profile(hybrid_spec);
+	manager->registerFactory(profile, RTC::Create<Gateway>, RTC::Delete<Gateway>);
+}
+
 void MyModuleInit(RTC::Manager* manager) {
-	std::cout << "Starting Hybrid" << std::endl;
+	std::cout << "Starting Gateway" << std::endl;
 	HybridInit(manager);
 	RTC::RtcBase* comp;
 
-	comp = manager->createComponent("Hybrid");
+	comp = manager->createComponent("Gateway");
 
 	if (comp == NULL) {
 		std::cerr << "Component create failed." << std::endl;
@@ -56,13 +77,16 @@ void createComp(int argc, char** argv,RTC::ModuleInitProc proc, bool block){
 	manager = RTC::Manager::init(argc, argv);
 	manager->init(argc, argv);
 	manager->setModuleInitProc(proc);
+	std::cout << "1" << std::endl;
 	manager->activateManager();
+	std::cout << "2" << std::endl;
 	manager->runManager(!block);
+	std::cout << "3" << std::endl;
 }
 
 int main(int argc, char** argv) {
 	std::cout << "Starting" << std::endl;
-	ros::init(argc, argv, "Hybrid", ros::init_options::NoSigintHandler);
+	ros::init(argc, argv, "Gateway", ros::init_options::NoSigintHandler);
 
 	createComp(argc,argv,MyModuleInit,false);
 	createComp(argc,argv,MyModuleInit2,false);
@@ -70,3 +94,4 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+

@@ -1,10 +1,16 @@
-
 #ifndef TEST_H_
 #define TEST_H_
 #include <iostream>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/any.hpp>
+
+template<class T>
+class MyTemplated {
+public:
+	template<class E>
+	void doIt(E e);
+};
 
 class Addict {
 public:
